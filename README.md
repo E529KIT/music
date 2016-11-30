@@ -7,6 +7,9 @@
 ### TODO（竹本）
 * 学習させた最後の全結合層だけを取り除き、その他を特徴抽出器として扱うシステム設計
 
+### TODO(oba)
+issueで管理する
+
 ### TODO（論文としての項目）
 
   * magentaの各モデルの学習方法の違い（Basic RNN ,lookback RNN ,Attention RNN）
