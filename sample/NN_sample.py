@@ -2,17 +2,15 @@
 import tensorflow as tf
 import numpy as np
 
-from graph.NN import NN
+from model.NN import NN
 
 
 class Config(object):
     input_size = 1
     label_size = 3
-    # hidden_layer = [20, 30, 40]
-    hidden_layer = []
+    hidden_layer = [20, 30, 40]
     keep_prob = 1
-    # optimizer_function = tf.train.AdamOptimizer(0.5)
-    optimizer_function = tf.train.GradientDescentOptimizer(0.5)
+    optimizer_function = tf.train.GradientDescentOptimizer(0.1)
 
 
 config = Config
@@ -41,10 +39,11 @@ with tf.Session() as session:
     # train
     for epoch in range(100):
         _, loss = session.run([model.traion_op, model.loss], {model.inputs: inputs, model.labels: labels})
-        print loss
+        if epoch % 10 == 0:
+            print loss
 
     # eval
-    correct_prediction = tf.equal(tf.argmax(model.labels, 1), tf.argmax(model.logits, 1))
+    correct_prediction = tf.equal(tf.argmax(eval_model.labels, 1), tf.argmax(eval_model.logits, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    accuracy_rate = session.run(accuracy, {model.inputs: inputs, model.labels: labels})
+    accuracy_rate = session.run(accuracy, {eval_model.inputs: inputs, eval_model.labels: labels})
     print accuracy_rate
