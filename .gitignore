@@ -92,3 +92,4 @@ ENV/
 .idea
 MNIST_data
 log
+*.pyc

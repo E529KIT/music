@@ -11,7 +11,7 @@ class DefaultConfig:
 
 
 class LSTM:
-    def __init__(self, is_train, config=DefaultConfig):
+    def __init__(self, is_train, config=DefaultConfig, generate=False):
         self.batch_size = batch_size = config.batch_size
         self.sequence_length = sequence_length = config.sequence_length
         input_size = config.input_size
@@ -19,8 +19,12 @@ class LSTM:
 
         self._global_step = global_step = tf.Variable(0, trainable=False, name='global_step', dtype=tf.int32)
 
-        self._inputs = inputs = tf.placeholder(tf.float32, [None, sequence_length, input_size],
-                                                       "input_data")
+        if generate:
+            self._inputs = inputs = tf.placeholder(tf.float32, [batch_size, None, input_size],
+                                                   "input_data")
+        else:
+            self._inputs = inputs = tf.placeholder(tf.float32, [None, sequence_length, input_size],
+                                                   "input_data")
         self._labels = labels = tf.placeholder(tf.float32, [None, sequence_length, label_size], "labels")
 
         cells = []
