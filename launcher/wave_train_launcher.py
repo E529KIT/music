@@ -1,5 +1,7 @@
 # coding=utf-8
 import tensorflow as tf
+import sys
+sys.path.append("../")
 
 from converter import complex_converter
 from converter import train_data_converter
