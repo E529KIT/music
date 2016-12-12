@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 class DefaultConfig:
     batch_size = 100
     sequence_length = 128
@@ -11,7 +12,7 @@ class DefaultConfig:
 
 
 class LSTM:
-    def __init__(self, is_train, config=DefaultConfig, generate=False):
+    def __init__(self, is_train, config=DefaultConfig, generate=False, last_activation_function=tf.nn.softmax):
         self.batch_size = batch_size = config.batch_size
         self.sequence_length = sequence_length = config.sequence_length
         input_size = config.input_size
@@ -41,11 +42,8 @@ class LSTM:
 
         outputs_size = config.cell_size_list[-1]
         outputs_flat = tf.reshape(outputs, [-1, outputs_size])
-        softmax_w = tf.get_variable(
-            "weigth", [outputs_size, label_size], dtype=tf.float32)
-        softmax_b = tf.get_variable("bias", [label_size], dtype=tf.float32)
-        self._logits = logits = tf.matmul(outputs_flat, softmax_w) + softmax_b
-
+        self._logits = logits = tf.contrib.layers.fully_connected(inputs=outputs_flat, num_outputs=label_size,
+                                                                  activation_fn=last_activation_function)
         self._logits_flat = logits_flat = tf.reshape(logits, [-1, label_size])
 
         self._labels_flat = labels_flat = tf.reshape(labels, [-1, label_size])

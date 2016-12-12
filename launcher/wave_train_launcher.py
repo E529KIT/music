@@ -44,9 +44,9 @@ class Config:
 if __name__ == '__main__':
     config = Config
     with tf.variable_scope("model"):
-        model = LSTM.LSTM(True, config)
+        model = LSTM.LSTM(True, config, last_activation_function=tf.nn.tanh)
     with tf.variable_scope("model", reuse=True):
-        generate_model = LSTM.LSTM(True, config, True)
+        generate_model = LSTM.LSTM(True, config, True, last_activation_function=tf.nn.tanh)
 
     load_filename = "/Users/tatsuya/Music/0321.wav"
     dataset = train_data_converter.create_dataset([load_filename], config.sequence_length, 44100)
