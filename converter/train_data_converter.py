@@ -17,8 +17,9 @@ def create_data(filename, sequence_length, sampling_rate):
               for i in range(1, data_size, sequence_length)]
     # 余剰データを0でうめる
     surplus_size = sequence_length - (data_size % sequence_length)
-    zero_list = [0] * surplus_size
-    inputs[-1] = inputs[-1] + zero_list
+    # lne(inputs[-1]) == len(labels[-1]) + 1
+    zero_list = [[0] * sampling_rate * 2] * (surplus_size + 1)
+    inputs[-1] = inputs[-1] + zero_list[: -1]
     labels[-1] = labels[-1] + zero_list
     return inputs, labels
 
