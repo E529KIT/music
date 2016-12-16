@@ -22,7 +22,7 @@ class LSTM:
 
         if generate:
             self._inputs = inputs = tf.placeholder(tf.float32, [batch_size, None, input_size],
-                                                   "input_data")
+                                                   "generate_input")
         else:
             self._inputs = inputs = tf.placeholder(tf.float32, [None, sequence_length, input_size],
                                                    "input_data")
@@ -30,8 +30,8 @@ class LSTM:
 
         cells = []
         for cell_size in config.cell_size_list:
-            cell = tf.nn.rnn_cell.BasicLSTMCell(cell_size, forget_bias=0.0)
-            if is_train:
+            cell = tf.nn.rnn_cell.BasicLSTMCell(cell_size)
+            if is_train and config.keep_prob < 1:
                 cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=config.keep_prob)
             cells.append(cell)
         cell = tf.nn.rnn_cell.MultiRNNCell(cells, state_is_tuple=True)
@@ -49,7 +49,7 @@ class LSTM:
         self._labels_flat = labels_flat = tf.reshape(labels, [-1, label_size])
         self._loss = loss = tf.reduce_mean(tf.square(logits_flat - labels_flat))
         tf.scalar_summary('loss', loss)
-        self._train_optimizer = config.optimizer_function.minimize(loss)
+        self._train_optimizer = config.optimizer_function.minimize(loss, global_step)
 
     @property
     def inputs(self):

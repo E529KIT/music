@@ -54,7 +54,7 @@ def create_data_set(batch_size, length):
 with tf.Session() as session:
     session.run(tf.initialize_all_variables())
     # train
-    for epoch in range(1000):
+    for epoch in range(10000):
         inputs, labels = create_data_set(config.batch_size, config.sequence_length)
         _, loss = session.run([model.train_optimizer, model.loss],
                               feed_dict={model.inputs: inputs, model.labels: labels})
