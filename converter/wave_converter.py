@@ -1,22 +1,16 @@
 import struct
 
 import numpy as np
-import wave
+from scipy.io.wavfile import read, write
+
 from itertools import chain
 
 
 def load_wave(filename):
-    wf = wave.open(filename, 'r')
-    params = wf.getparams()
-    chunk_size = wf.getnframes()
-    amp = (2 ** 8) ** wf.getsampwidth() / 2
-    data = wf.readframes(chunk_size)
-    data = np.frombuffer(data, 'int16')
+    sampling_rate, data = read(filename)
     data = data.astype(float)
-    data = data / amp
-    wf.close()
-
-    return data, params
+    data /= 255
+    return data, sampling_rate
 
 
 def fourier_transform(data, sampling_rate):
@@ -32,22 +26,17 @@ def inverse_fourier_transform(data):
     return list(chain.from_iterable(result))
 
 
-def write_wave(filename, params, data):
+def write_wave(filename, sampling_rate, data):
     data = np.array(data)
-    amp = (2 ** 8) ** params[1] / 2
-    data *= amp
-    data = struct.pack("h" * len(data), *data)
-    writer = wave.Wave_write(filename)
-    writer.setparams(params)
-    writer.writeframes(data)
-    writer.close()
+    data *= 255
+    data = data.astype('uint8')
+    write(filename, sampling_rate, data)
 
 
 if __name__ == '__main__':
-    load_filename = "/home/tatsuya/Music/2.wav"
-    data, params = load_wave(load_filename)
-    data = fourier_transform(data, params[2])
-    a = [(max(i), min(i)) for i in data]
+    load_filename = "/home/tatsuya/Music/1.wav"
+    data, sampling_rate = load_wave(load_filename)
+    data = fourier_transform(data, sampling_rate)
     data = inverse_fourier_transform(data)
     write_filename = "/home/tatsuya/Music/test.wav"
-    write_wave(write_filename, params, data)
+    write_wave(write_filename, sampling_rate, data)
