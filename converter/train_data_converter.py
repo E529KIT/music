@@ -9,6 +9,8 @@ def create_dataset(filename_list, sequence_length, sampling_rate):
 
 def create_data(filename, sequence_length, sampling_rate):
     data, params = wave_converter.load_wave(filename)
+    data = data.astype(float)
+    data /= 255
     data = wave_converter.fourier_transform(data, sampling_rate)
     if len(data[-1]) != sampling_rate:
         data.pop()  # 音楽の時間が小数点秒の場合、データを食わせられないため

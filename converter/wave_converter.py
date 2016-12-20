@@ -8,8 +8,6 @@ from itertools import chain
 
 def load_wave(filename):
     sampling_rate, data = read(filename)
-    data = data.astype(float)
-    data /= 255
     return data, sampling_rate
 
 

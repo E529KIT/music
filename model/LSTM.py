@@ -47,7 +47,8 @@ class LSTM:
         self._logits_flat = logits_flat = tf.reshape(logits, [-1, label_size])
 
         self._labels_flat = labels_flat = tf.reshape(labels, [-1, label_size])
-        self._loss = loss = tf.reduce_mean(tf.square(logits_flat - labels_flat))
+        self._loss = loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits_flat, labels_flat))
+        # self._loss = loss = tf.reduce_mean(tf.square(logits_flat - labels_flat))
         tf.scalar_summary('loss', loss)
         self._train_optimizer = config.optimizer_function.minimize(loss, global_step)
 

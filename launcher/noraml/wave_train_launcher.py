@@ -3,22 +3,11 @@ import sys
 
 import tensorflow as tf
 
-sys.path.append("../")
+sys.path.append("../../")
 
+from launcher.common.train import train
 from converter import train_data_converter
 from model import LSTM
-
-
-def generate(session, model, start_input, size):
-    state = session.run(model.initial_state)
-    fetches = [model.logits, model.last_state]
-    result = []
-    logits = [start_input]
-    for i in range(size):
-        feed_dict = {model.inputs: [logits], model.initial_state: state}
-        logits, state = session.run(fetches, feed_dict)
-        result.append(logits)
-    return result
 
 
 class Config:
@@ -35,18 +24,15 @@ class Config:
 if __name__ == '__main__':
     with tf.Graph().as_default() as graph:
         config = Config
+
         load_filename = "/home/tatsuya/Music/1.wav"
         dataset = train_data_converter.create_dataset([load_filename], config.sequence_length, 8000)
         inputs, labels = dataset[0]
 
         with tf.variable_scope("model"):
-            model = LSTM.LSTM(True, config, True, tf.nn.tanh)
+            model = LSTM.LSTM(True, config, last_activation_function=tf.nn.tanh)
 
         with tf.Session() as session:
             saver = tf.train.Saver()
-            session.run(tf.global_variables_initializer())
             saver.restore(session, "data/1/model")
-            buf = generate(session, model, inputs[0][0], 294)
-
-        write_filename = "/home/tatsuya/Music/created.wave"
-        train_data_converter.generate(write_filename, 8000, buf)
+            train(session, model, inputs, labels, 1000, saver)
