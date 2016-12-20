@@ -17,7 +17,7 @@ def generate(session, model, start_input, size):
     for i in range(size):
         feed_dict = {model.inputs: [logits], model.initial_state: state}
         logits, state = session.run(fetches, feed_dict)
-        result.append(logits)
+        result.append(logits[0])
     return result
 
 
@@ -45,7 +45,7 @@ if __name__ == '__main__':
         with tf.Session() as session:
             saver = tf.train.Saver()
             session.run(tf.global_variables_initializer())
-            saver.restore(session, "data/1/model")
+            saver.restore(session, "noraml/data/1/model")
             buf = generate(session, model, inputs[0][0], 294)
 
         write_filename = "/home/tatsuya/Music/created.wave"
