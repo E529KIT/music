@@ -38,4 +38,4 @@ WAVEからの生成をおこなっていたが、モデルをかなり多きく�
 競合回避のため、新しくディレクトリを作成し、そこで作業する
 
 ### 学内URL
-* [PCの状態](http://hubble.ic.kanazawa-it.ac.jp/zabbix)
+* [PCの状態](http://hubble.ic.kanazawa-it.ac.jp/zabbix)(pascal2)
