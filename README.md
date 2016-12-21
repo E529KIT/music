@@ -39,3 +39,6 @@ WAVEからの生成をおこなっていたが、モデルをかなり多きく�
 
 ### 学内URL
 * [PCの状態](http://hubble.ic.kanazawa-it.ac.jp/zabbix)(pascal2)
+
+### Magentaについて
+* [DQN](http://qiita.com/gdmiwasawa/items/362664b2e742281c1683)
