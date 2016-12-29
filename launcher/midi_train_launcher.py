@@ -27,7 +27,6 @@ if __name__ == '__main__':
         config = Config
 
         load_filename = "../midi/bwv772.midi"
-        save_filename = "test.mid"
         dataset = train_data_converter.create_midi_dataset(load_filename, config.sequence_length)
         inputs, labels = dataset[0]
 
