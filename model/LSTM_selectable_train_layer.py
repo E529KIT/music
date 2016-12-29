@@ -56,7 +56,7 @@ class LSTM:
 
         self._labels_flat = labels_flat = tf.reshape(labels, [-1, label_size])
         self._loss = loss = tf.reduce_mean(tf.square(logits_flat - labels_flat))
-        tf.scalar_summary('loss', loss)
+        tf.summary.scalar('loss', loss)
         gradients = tf.gradients(loss, train_variables)
         self._train_optimizer = config.optimizer_function.apply_gradients(zip(gradients, train_variables), global_step)
 
