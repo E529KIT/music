@@ -1,6 +1,6 @@
 # coding=utf-8
 import numpy as np
-import complex_converter, wave_converter
+import complex_converter, wave_converter, midi_converter
 
 
 def create_dataset(filename_list, sequence_length, sampling_rate):
@@ -36,6 +36,7 @@ def create_data(filename, sequence_length, sampling_rate):
     labels[-1] = labels[-1] + zero_list
     return inputs, labels
 
+
 def generate(filename, sampling_rate, data):
     data = np.array(data)
     data *= 5000
@@ -45,6 +46,31 @@ def generate(filename, sampling_rate, data):
     data = wave_converter.inverse_fourier_transform(data)
     print data[0]
     wave_converter.write_wave(filename, sampling_rate, data)
+
+
+def _div_inputs_and_label(data, sequence_length):
+    '''
+    dataをinputsとlabelsに分けて、sequence_lengthの配列に変換する
+    余った部分は０うめする。
+    :param data: shape[N, input_size]
+    :param sequence_length:
+    :return: inputs, labels (shape:[?, sequence_length, input_size])
+    '''
+    data = np.array(data)
+    if len(data) == 0:
+        raise Exception("data.size == 0")
+    surplus_size = sequence_length - len(data) % sequence_length + 1
+    data = np.append(data, np.zeros([surplus_size, data.shape[1]]), axis=0)
+    dataset_size = len(data) / sequence_length
+    inputs = data[:-1].reshape(dataset_size, sequence_length, data.shape[1])
+    labels = data[1:].reshape(dataset_size, sequence_length, data.shape[1])
+    return inputs, labels
+
+
+def create_midi_dataset(filename, sequence_length):
+    midi = midi_converter.load_file(filename)
+    dataset = midi_converter.convert_PrettyMIDI_to_train_data(midi)
+    return [_div_inputs_and_label(one_data, sequence_length) for one_data in dataset]
 
 if __name__ == '__main__':
     load_filename = "/home/tatsuya/Music/1.wav"
