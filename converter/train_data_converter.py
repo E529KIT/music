@@ -58,6 +58,17 @@ def create_midi_dataset(filename, sequence_length):
     dataset = midi_converter.convert_PrettyMIDI_to_train_data(midi)
     return [_div_inputs_and_label(one_data, sequence_length) for one_data in dataset]
 
+
+def generate_midi(filename, data):
+    '''
+    0.5以上のものを1それ以下のものを0に変え、そのデータからmidiを作成する。
+    :param filename:
+    :param data:
+    :return: None
+    '''
+    data = map(lambda one_data: map(lambda x: 1 if x > 0.5 else 0, one_data), data)
+    midi_converter.save_file(filename, data)
+
 if __name__ == '__main__':
     load_filename = "/home/tatsuya/Music/1.wav"
     dataset = create_dataset([load_filename], 20, 8000)
