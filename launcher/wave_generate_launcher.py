@@ -30,6 +30,7 @@ class Config:
     cell_size_list = [4000]
     keep_prob = 1.0
     optimizer_function = tf.train.AdamOptimizer(0.1)
+    clip_norm = 3
 
 
 if __name__ == '__main__':

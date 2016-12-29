@@ -29,11 +29,10 @@ def train(session, model, inputs, labels, epoch, saver):
 
 class Config:
     batch_size = 1
-    sequence_length = 20
-    # 8KHz / 2 * 2 (sampling rate / 2 * complex)
-    input_size = 8000
-    label_size = 8000
-    cell_size_list = [4000]
+    sequence_length = 40
+    input_size = 128
+    label_size = 128
+    cell_size_list = [128]
     keep_prob = 1.0
     optimizer_function = tf.train.AdamOptimizer(0.1)
     clip_norm = 3
@@ -44,8 +43,9 @@ if __name__ == '__main__':
     with tf.Graph().as_default() as graph:
         config = Config
 
-        load_filename = "/home/tatsuya/Music/1.wav"
-        dataset = train_data_converter.create_dataset([load_filename], config.sequence_length, 8000)
+        load_filename = "../midi/bwv772.midi"
+        save_filename = "test.mid"
+        dataset = train_data_converter.create_midi_dataset(load_filename, config.sequence_length)
         inputs, labels = dataset[0]
 
         with tf.variable_scope("model"):
@@ -53,5 +53,5 @@ if __name__ == '__main__':
 
         with tf.Session() as session:
             saver = tf.train.Saver()
-            saver.restore(session, "data/1/model")
+            # saver.restore(session, "data/1/model")
             train(session, model, inputs, labels, 1000, saver)
