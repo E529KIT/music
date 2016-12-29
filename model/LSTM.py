@@ -9,6 +9,7 @@ class DefaultConfig:
     cell_size_list = [20, 30, 40]
     keep_prob = 0.9
     optimizer_function = tf.train.AdamOptimizer(0.5)
+    clip_norm = 3
 
 
 class LSTM:
@@ -48,8 +49,13 @@ class LSTM:
 
         self._labels_flat = labels_flat = tf.reshape(labels, [-1, label_size])
         self._loss = loss = tf.reduce_mean(tf.square(logits_flat - labels_flat))
+        params = tf.trainable_variables()
+        gradients = tf.gradients(loss, params)
+        clipped_gradients, _ = tf.clip_by_global_norm(gradients,
+                                                      config.clip_norm)
         tf.scalar_summary('loss', loss)
-        self._train_optimizer = config.optimizer_function.minimize(loss, global_step)
+        self._train_optimizer = config.optimizer_function.apply_gradients(zip(clipped_gradients, params),
+                                                                          global_step)
 
     @property
     def inputs(self):
