@@ -53,7 +53,7 @@ class LSTM:
         gradients = tf.gradients(loss, params)
         clipped_gradients, _ = tf.clip_by_global_norm(gradients,
                                                       config.clip_norm)
-        tf.scalar_summary('loss', loss)
+        tf.summary.scalar('loss', loss)
         self._train_optimizer = config.optimizer_function.apply_gradients(zip(clipped_gradients, params),
                                                                           global_step)
 

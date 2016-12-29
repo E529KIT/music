@@ -1,30 +1,13 @@
 # coding=utf-8
-import tensorflow as tf
 import sys
-import datetime
+
+import tensorflow as tf
 
 sys.path.append("../")
 
+from launcher.common.train import train
 from converter import train_data_converter
 from model import LSTM
-
-
-def train(session, model, inputs, labels, epoch, saver):
-    train_writer = tf.train.SummaryWriter('./log', session.graph)
-    merged = tf.merge_all_summaries()
-    session.run(tf.global_variables_initializer())
-    global_step, state = session.run([model.global_step, model.initial_state])
-    fetches = [model.train_optimizer, model.global_step, model.last_state, model.loss, merged]
-    for i in range(epoch):
-        for input_, label in zip(inputs, labels):
-            feed_dict = {model.inputs: [input_], model.initial_state: state, model.labels: [label]}
-            _, global_step, state, loss, summaries = session.run(fetches, feed_dict)
-            train_writer.add_summary(summaries, global_step)
-        if i % 50 == 0:
-            saver.save(session, "data/1/model")
-            now = datetime.datetime.today()
-            print '%d: %s' % (i, now.isoformat())
-
 
 
 class Config:
@@ -38,8 +21,8 @@ class Config:
     clip_norm = 3
 
 
-
 if __name__ == '__main__':
+    logdir = "log/1"
     with tf.Graph().as_default() as graph:
         config = Config
 
@@ -53,5 +36,4 @@ if __name__ == '__main__':
 
         with tf.Session() as session:
             saver = tf.train.Saver()
-            # saver.restore(session, "data/1/model")
-            train(session, model, inputs, labels, 1000, saver)
+            train(session, model, inputs, labels, 1000, saver, logdir)

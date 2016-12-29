@@ -14,13 +14,13 @@ def variable_summaries(var, name):
     """varの値の変動をtensorboardで確認できるようにする"""
     with tf.name_scope('summaries'):
         mean = tf.reduce_mean(var)
-        tf.scalar_summary('mean/' + name, mean)
+        tf.summary.scalar('mean/' + name, mean)
         with tf.name_scope('stddev'):
             stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-        tf.scalar_summary('stddev/' + name, stddev)
-        tf.scalar_summary('max/' + name, tf.reduce_max(var))
-        tf.scalar_summary('min/' + name, tf.reduce_min(var))
-        tf.histogram_summary(name, var)
+        tf.summary.scalar('stddev/' + name, stddev)
+        tf.summary.scalar('max/' + name, tf.reduce_max(var))
+        tf.summary.scalar('min/' + name, tf.reduce_min(var))
+        tf.summary.histogram(name, var)
 
 
 def create_layer(input_tensor, input_dim, output_dim, layer_name, activation_function=None):
@@ -42,10 +42,10 @@ def create_layer(input_tensor, input_dim, output_dim, layer_name, activation_fun
             variable_summaries(biases, layer_name + '/biases')
         with tf.name_scope('Wx_plus_b'):
             preactivate = tf.matmul(input_tensor, weights) + biases
-            tf.histogram_summary(layer_name + '/pre_activations', preactivate)
+            tf.summary.histogram(layer_name + '/pre_activations', preactivate)
         if activation_function is not None:
             preactivate = activation_function(preactivate)
-        tf.histogram_summary(layer_name + '/activations', preactivate)
+        tf.summary.histogram(layer_name + '/activations', preactivate)
         return preactivate, weights, biases
 
 

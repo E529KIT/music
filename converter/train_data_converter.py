@@ -13,28 +13,13 @@ def create_data(filename, sequence_length, sampling_rate):
     if len(data[-1]) != sampling_rate:
         data.pop()  # 音楽の時間が小数点秒の場合、データを食わせられないため
 
-    # 訓練データの縮小のため可聴範囲が外の音は消す
-    one_data_size = sampling_rate / 2 * 2
     data = [a[:sampling_rate / 2] for a in data]
 
     data = [complex_converter.complex_list_to_double_list(one_data) for one_data in data]
 
     data = np.array(data)
     data /= 5000
-    data = data.tolist()
-    data_set_size = len(data)
-    inputs = [data[i:i + sequence_length]
-              for i in range(0, data_set_size, sequence_length)]
-    labels = [data[i: i + sequence_length]
-              for i in range(1, data_set_size, sequence_length)]
-
-    # 余剰データを0でうめる
-    surplus_size = sequence_length - (data_set_size % sequence_length)
-    # lne(inputs[-1]) == len(labels[-1]) + 1
-    zero_list = [[0] * one_data_size] * (surplus_size + 1)
-    inputs[-1] = inputs[-1] + zero_list[: -1]
-    labels[-1] = labels[-1] + zero_list
-    return inputs, labels
+    return _div_inputs_and_label(data, sequence_length)
 
 
 def generate(filename, sampling_rate, data):
@@ -56,7 +41,8 @@ def _div_inputs_and_label(data, sequence_length):
     :param sequence_length:
     :return: inputs, labels (shape:[?, sequence_length, input_size])
     '''
-    data = np.array(data)
+    if isinstance(data, list):
+        data = np.array(data)
     if len(data) == 0:
         raise Exception("data.size == 0")
     surplus_size = sequence_length - len(data) % sequence_length + 1
