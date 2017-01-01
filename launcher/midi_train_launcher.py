@@ -15,7 +15,7 @@ class Config:
     sequence_length = 20
     input_size = 128
     label_size = 128
-    cell_size_list = [128]
+    cell_size_list = [128, 128]
     keep_prob = 0.9
     optimizer_function = tf.train.GradientDescentOptimizer(0.1)
     clip_norm = 3
