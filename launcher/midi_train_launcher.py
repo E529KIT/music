@@ -31,7 +31,7 @@ if __name__ == '__main__':
         inputs, labels = dataset[0]
 
         with tf.variable_scope("model"):
-            model = LSTM.LSTM(True, config, last_activation_function=tf.nn.tanh)
+            model = LSTM.LSTM(True, config, last_activation_function=tf.nn.sigmoid)
 
         with tf.Session() as session:
             saver = tf.train.Saver()

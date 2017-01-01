@@ -53,10 +53,13 @@ class LSTM:
         gradients = tf.gradients(loss, params)
         clipped_gradients, _ = tf.clip_by_global_norm(gradients,
                                                       config.clip_norm)
-        abs_gradient_average = tf.reduce_mean(map(lambda gradient: tf.reduce_mean(tf.abs(gradient)), gradients))
-        abs_clipped_gradient_average = tf.reduce_mean(map(lambda gradient: tf.reduce_mean(tf.abs(gradient)), clipped_gradients))
-        tf.summary.scalar("gradients", abs_gradient_average)
-        tf.summary.scalar("clipped_gradients", abs_clipped_gradient_average)
+        abs_gradients = map(lambda gradient: tf.abs(gradient), gradients)
+        max_gradient = map(lambda gradient: tf.reduce_max(gradient), abs_gradients)
+        min_gradient =  map(lambda gradient: tf.reduce_min(gradient), abs_gradients)
+        mean_gradient = map(lambda gradient: tf.reduce_mean(gradient), abs_gradients)
+        tf.summary.scalar('gradient/max', max_gradient)
+        tf.summary.scalar('gradient/min', min_gradient)
+        tf.summary.scalar('gradient/mean', mean_gradient)
         tf.summary.scalar('loss', loss)
         self._train_optimizer = config.optimizer_function.apply_gradients(zip(clipped_gradients, params),
                                                                           global_step)
