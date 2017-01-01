@@ -4,22 +4,45 @@ import tensorflow as tf
 
 sys.path.append("../")
 
-from launcher.common.generate import generate
+# from launcher.common.generate import generate
 from converter import train_data_converter
 from model import LSTM
 
+
+def generate(session, model, start_inputs, size):
+    state = session.run(model.initial_state)
+    fetches = [model.logits, model.last_state]
+    result = []
+    logits = []
+    start_input_size = len(start_inputs)
+
+    for input_ in start_inputs:
+        feed_dict = {model.inputs: [input_], model.initial_state: state}
+        logits, state = session.run(fetches, feed_dict)
+        logits = map(lambda x: 1 if x > 0.8 else 0, logits[0])
+        result.append(logits)
+
+    for i in range(size - start_input_size):
+        feed_dict = {model.inputs: [[logits]], model.initial_state: state}
+        logits, state = session.run(fetches, feed_dict)
+        logits = map(lambda x: 1 if x > 0.8 else 0, logits[0])
+        result.append(logits)
+    return result
+
+
 class Config:
     batch_size = 1
-    sequence_length = 40
+    sequence_length = 1
     input_size = 128
     label_size = 128
-    cell_size_list = [128]
+    cell_size_list = [128, 128]
     keep_prob = 1.0
-    optimizer_function = tf.train.AdamOptimizer(0.1)
+    optimizer_function = tf.train.GradientDescentOptimizer(0.1)
     clip_norm = 3
 
+
 if __name__ == '__main__':
-    logdir = "log/1"
+    logdir = "log/21"
     with tf.Graph().as_default() as graph:
         config = Config
         load_filename = "../midi/bwv772.midi"
@@ -27,13 +50,13 @@ if __name__ == '__main__':
         inputs, labels = dataset[0]
 
         with tf.variable_scope("model"):
-            model = LSTM.LSTM(True, config, True, tf.nn.tanh)
+            model = LSTM.LSTM(True, config, True, tf.nn.sigmoid)
 
         with tf.Session() as session:
             saver = tf.train.Saver()
             session.run(tf.global_variables_initializer())
             saver.restore(session, logdir + "/data/model")
-            buf = generate(session, model, inputs[0][0], len(inputs))
+            buf = generate(session, model, inputs, len(inputs))
 
         save_filename = "test.mid"
         train_data_converter.generate_midi(save_filename, buf)

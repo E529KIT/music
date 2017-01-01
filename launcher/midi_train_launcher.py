@@ -26,7 +26,7 @@ if __name__ == '__main__':
     with tf.Graph().as_default() as graph:
         config = Config
 
-        load_filename = "../midi/bwv772.midi"
+        load_filename = "../midi/train_zanarukandonite.midi"
         dataset = train_data_converter.create_midi_dataset(load_filename, config.sequence_length)
         inputs, labels = dataset[0]
 
