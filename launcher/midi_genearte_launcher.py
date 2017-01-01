@@ -19,13 +19,13 @@ def generate(session, model, start_inputs, size):
     for input_ in start_inputs:
         feed_dict = {model.inputs: [input_], model.initial_state: state}
         logits, state = session.run(fetches, feed_dict)
-        logits = map(lambda x: 1 if x > 0.8 else 0, logits[0])
+        logits = map(lambda x: 1 if x > 0.5 else 0, logits[0])
         result.append(logits)
 
     for i in range(size - start_input_size):
         feed_dict = {model.inputs: [[logits]], model.initial_state: state}
         logits, state = session.run(fetches, feed_dict)
-        logits = map(lambda x: 1 if x > 0.8 else 0, logits[0])
+        logits = map(lambda x: 1 if x > 0.5 else 0, logits[0])
         result.append(logits)
     return result
 
@@ -42,10 +42,10 @@ class Config:
 
 
 if __name__ == '__main__':
-    logdir = "log/21"
+    logdir = "../train_log/issue45/zanarukando/1/"
     with tf.Graph().as_default() as graph:
         config = Config
-        load_filename = "../midi/bwv772.midi"
+        load_filename = "../midi/train_zanarukandonite.midi"
         dataset = train_data_converter.create_midi_dataset(load_filename, config.sequence_length)
         inputs, labels = dataset[0]
 
