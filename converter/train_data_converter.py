@@ -45,9 +45,15 @@ def _div_inputs_and_label(data, sequence_length):
         data = np.array(data)
     if len(data) == 0:
         raise Exception("data.size == 0")
-    surplus_size = sequence_length - len(data) % sequence_length + 1
+    if sequence_length == 1:
+        surplus_size = 1
+    else:
+        surplus_size = sequence_length - len(data) % sequence_length + 1
     data = np.append(data, np.zeros([surplus_size, data.shape[1]]), axis=0)
-    dataset_size = len(data) / sequence_length
+    if sequence_length == 1:
+        dataset_size = len(data) - 1
+    else:
+        dataset_size = len(data) / sequence_length
     inputs = data[:-1].reshape(dataset_size, sequence_length, data.shape[1])
     labels = data[1:].reshape(dataset_size, sequence_length, data.shape[1])
     return inputs, labels

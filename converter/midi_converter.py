@@ -33,8 +33,8 @@ def convert_PrettyMIDI_to_train_data(midi):
     for instrument in instruments:
         train_data_index = programs[instrument.program]
         for note in instrument.notes:
-            start_time = int(note.start / one_data_sec)
-            end_time = int(note.end / one_data_sec)
+            start_time = int(round(note.start / one_data_sec))
+            end_time = int(round(note.end / one_data_sec))
             for time in range(start_time, end_time):
                 train_data[train_data_index][time][note.pitch] = 1
     return train_data
@@ -73,7 +73,7 @@ def save_file(filename, data, velocity=100, instrument=pretty_midi.Instrument(pr
 
 
 if __name__ == '__main__':
-    load_filename = "../midi/bwv772.midi"
+    load_filename = "../midi/zanarukandonite.midi"
     save_filename = "test.mid"
     midi = load_file(load_filename)
     train_data = convert_PrettyMIDI_to_train_data(midi)

@@ -15,8 +15,8 @@ def train(session, model, inputs, labels, epoch, saver, logdir):
     else:
         saver.restore(session, save_file)
 
-    global_step, state = session.run([model.global_step, model.initial_state])
     for i in range(epoch):
+        global_step, state = session.run([model.global_step, model.initial_state])
         for input_, label in zip(inputs, labels):
             feed_dict = {model.inputs: [input_], model.initial_state: state, model.labels: [label]}
             if global_step % 100 == 0:
