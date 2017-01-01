@@ -12,12 +12,12 @@ from model import LSTM
 
 class Config:
     batch_size = 1
-    sequence_length = 40
+    sequence_length = 20
     input_size = 128
     label_size = 128
     cell_size_list = [128]
-    keep_prob = 1.0
-    optimizer_function = tf.train.AdamOptimizer(0.1)
+    keep_prob = 0.9
+    optimizer_function = tf.train.GradientDescentOptimizer(0.1)
     clip_norm = 3
 
 
@@ -35,4 +35,4 @@ if __name__ == '__main__':
 
         with tf.Session() as session:
             saver = tf.train.Saver()
-            train(session, model, inputs, labels, 1000, saver, logdir)
+            train(session, model, inputs, labels, 10000, saver, logdir)
