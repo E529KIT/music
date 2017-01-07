@@ -31,7 +31,7 @@ class LSTM:
 
         cells = []
         for cell_size in config.cell_size_list:
-            cell = tf.nn.rnn_cell.BasicLSTMCell(cell_size)
+            cell = tf.nn.rnn_cell.BasicLSTMCell(cell_size, forget_bias=0)
             if is_train and config.keep_prob < 1:
                 cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=config.keep_prob)
             cells.append(cell)
@@ -53,13 +53,12 @@ class LSTM:
         gradients = tf.gradients(loss, params)
         clipped_gradients, _ = tf.clip_by_global_norm(gradients,
                                                       config.clip_norm)
-        abs_gradients = map(lambda gradient: tf.abs(gradient), gradients)
-        max_gradient = tf.reduce_max(map(lambda gradient: tf.reduce_max(gradient), abs_gradients))
-        min_gradient = tf.reduce_min(map(lambda gradient: tf.reduce_min(gradient), abs_gradients))
-        mean_gradient = tf.reduce_mean(map(lambda gradient: tf.reduce_mean(gradient), abs_gradients))
-        tf.summary.scalar('gradient/max', max_gradient)
-        tf.summary.scalar('gradient/min', min_gradient)
-        tf.summary.scalar('gradient/mean', mean_gradient)
+        for param, gradient in zip(params, clipped_gradients):
+            abs_gradient = tf.abs(gradient)
+            with tf.name_scope(param.name):
+                tf.summary.scalar('gradient/max', tf.reduce_max(abs_gradient))
+                tf.summary.scalar('gradient/min', tf.reduce_min(abs_gradient))
+                tf.summary.scalar('gradient/mean', tf.reduce_mean(abs_gradient))
         tf.summary.scalar('loss', loss)
         self._train_optimizer = config.optimizer_function.apply_gradients(zip(clipped_gradients, params),
                                                                           global_step)

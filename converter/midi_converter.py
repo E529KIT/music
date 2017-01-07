@@ -17,7 +17,7 @@ def convert_PrettyMIDI_to_train_data(midi):
     if len(tempo_change_times) > 1:
         raise Exception("change tempo in music")
     one_data_sec = 60 / tempi[0] / 8
-    train_data_size = end_time / one_data_sec
+    train_data_size = int(round(end_time / one_data_sec))
 
     # 同じ楽器で演奏されているものはまとめる。
     instruments = [instrument for instrument in midi.instruments if not instrument.is_drum]
