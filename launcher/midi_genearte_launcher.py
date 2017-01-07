@@ -9,23 +9,23 @@ from converter import train_data_converter
 from model import LSTM
 
 
-def generate(session, model, start_inputs, size):
+def generate(session, model, start_inputs, size, threshold_value):
     state = session.run(model.initial_state)
     fetches = [model.logits, model.last_state]
-    result = []
+    result = [start_inputs[0]]
     logits = []
     start_input_size = len(start_inputs)
 
     for input_ in start_inputs:
         feed_dict = {model.inputs: [input_], model.initial_state: state}
         logits, state = session.run(fetches, feed_dict)
-        logits = map(lambda x: 1 if x > 0.5 else 0, logits[0])
+        logits = map(lambda x: 1 if x > threshold_value else 0, logits[0])
         result.append(logits)
 
     for i in range(size - start_input_size):
         feed_dict = {model.inputs: [[logits]], model.initial_state: state}
         logits, state = session.run(fetches, feed_dict)
-        logits = map(lambda x: 1 if x > 0.5 else 0, logits[0])
+        logits = map(lambda x: 1 if x > threshold_value else 0, logits[0])
         result.append(logits)
     return result
 
@@ -56,7 +56,7 @@ if __name__ == '__main__':
             saver = tf.train.Saver()
             session.run(tf.global_variables_initializer())
             saver.restore(session, logdir + "/data/model")
-            buf = generate(session, model, inputs, len(inputs))
+            buf = generate(session, model, inputs, len(inputs), 0.5)
 
         save_filename = "test.mid"
         train_data_converter.generate_midi(save_filename, buf)
