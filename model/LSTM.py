@@ -55,7 +55,10 @@ class LSTM:
                                                       config.clip_norm)
         for param, gradient in zip(params, clipped_gradients):
             abs_gradient = tf.abs(gradient)
-            with tf.name_scope(param.name):
+            # not valid contain ":"
+            # variable name is "....:0"
+            # TODO: Every name support. This is not fulfill such as "....:10".
+            with tf.name_scope(param.name[:-2]):
                 tf.summary.scalar('gradient/max', tf.reduce_max(abs_gradient))
                 tf.summary.scalar('gradient/min', tf.reduce_min(abs_gradient))
                 tf.summary.scalar('gradient/mean', tf.reduce_mean(abs_gradient))
