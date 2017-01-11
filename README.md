@@ -20,11 +20,11 @@ WAVEからの生成をおこなっていたが、モデルをかなり多きく�
 * [DQN](http://qiita.com/gdmiwasawa/items/362664b2e742281c1683)
 
 ### ディレクトリの説明
-launcher：基本的にここの中にあるコードから走らせる
-converter:データの変換を行うコード
-magenta:magenta
-midi:ダウンロードしたmidiの保存場所
-model:DeepLearningのモデル
-sample:modelのサンプルコード
-test:使ってない
-train_log:学習結果をおくディレクトリ
+* launcher：基本的にここの中にあるコードから走らせる
+* converter:データの変換を行うコード
+* magenta:magenta
+* midi:ダウンロードしたmidiの保存場所
+* model:DeepLearningのモデル
+* sample:modelのサンプルコード
+* test:使ってない
+* train_log:学習結果をおくディレクトリ
