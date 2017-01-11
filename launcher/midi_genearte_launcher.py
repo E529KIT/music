@@ -53,7 +53,7 @@ if __name__ == '__main__':
             model = LSTM.LSTM(True, config, True, tf.nn.sigmoid)
 
         with tf.Session() as session:
-            saver = tf.train.Saver()
+            saver = tf.train.Saver(tf.trainable_variables())
             session.run(tf.global_variables_initializer())
             saver.restore(session, logdir + "/data/model")
             buf = generate(session, model, [inputs[0]], len(inputs), 0.5)

@@ -34,7 +34,7 @@ class Config:
 
 def main(argv):
     config = Config
-    midi_dir = "../midi/"
+    midi_dir = "../midi/multi_train_midi"
     midi_files = glob.glob(midi_dir + "/*.midi") + glob.glob(midi_dir + "/*.mid")
     # 一つの楽器のみ使用しているデータを対象とする
     train_data = [train_data_converter.create_midi_dataset(filename, config.sequence_length)[0] for filename in
@@ -44,7 +44,7 @@ def main(argv):
             model = LSTM(True, config, last_activation_function=tf.nn.sigmoid)
 
         with tf.Session() as session:
-            saver = tf.train.Saver()
+            saver = tf.train.Saver(tf.trainable_variables())
             train_has_batch(session, model, train_data, 0, config.batch_size, saver, FLAGS.logdir, FLAGS.load_dir)
 
 

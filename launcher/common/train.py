@@ -8,13 +8,14 @@ import tensorflow as tf
 
 
 def _init(session, saver, logdir, load_dir=None):
+    session.run(tf.global_variables_initializer())
     if load_dir:
         saver.restore(session, load_dir + "/data/model")
+        print "load from " + load_dir
 
     save_file = logdir + "/data/model"
     if not os.path.isdir(logdir + "/data"):
         os.mkdir(logdir + "/data")
-        session.run(tf.global_variables_initializer())
     elif load_dir is None:
         saver.restore(session, save_file)
 
@@ -98,7 +99,7 @@ def train_has_batch(session, model, train_data, epoch_num, batch_size, saver, lo
         change_feed_index = [i for i, change in enumerate(feed_length <= feed_index) if change]
         for index in change_feed_index:
             if len(train_data) == batch_size:
-                feed_length[index] = 0
+                feed_index[index] = 0
             else:
                 add_data = random.choice(train_data)
                 feed_data[index] = add_data
