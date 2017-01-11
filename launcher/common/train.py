@@ -3,8 +3,8 @@ import datetime
 import os
 import random
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
 
 def _init(session, saver, logdir, load_dir=None):
@@ -94,16 +94,18 @@ def train_has_batch(session, model, train_data, epoch_num, batch_size, saver, lo
                                                 feed_dict)
         feed_index += 1
 
-        #update feed data
+        # update feed data
         change_feed_index = [i for i, change in enumerate(feed_length <= feed_index) if change]
         for index in change_feed_index:
-            add_data = random.choice(train_data)
-            feed_data[index] = add_data
-            feed_length[index] = len(add_data)
-            feed_index[index] = 0
+            if len(train_data) == batch_size:
+                feed_length[index] = 0
+            else:
+                add_data = random.choice(train_data)
+                feed_data[index] = add_data
+                feed_length[index] = len(add_data)
+                feed_index[index] = 0
 
         if epoch_num > 0 and epoch_num <= epoch:
             break
 
     saver.save(session, save_file)
-

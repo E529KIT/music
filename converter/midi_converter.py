@@ -20,6 +20,7 @@ def convert_PrettyMIDI_to_train_data(midi):
     train_data_size = int(round(end_time / one_data_sec))
 
     # 同じ楽器で演奏されているものはまとめる。
+    # ドラムは学習データから外す
     instruments = [instrument for instrument in midi.instruments if not instrument.is_drum]
     programs = {}
     program_index = 0
