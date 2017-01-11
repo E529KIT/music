@@ -36,7 +36,7 @@ class Config:
     input_size = 128
     label_size = 128
     cell_size_list = [128, 128]
-    keep_prob = 1.0
+    keep_prob = 0.8
     optimizer_function = tf.train.GradientDescentOptimizer(0.1)
     clip_norm = 3
 
@@ -56,7 +56,7 @@ if __name__ == '__main__':
             saver = tf.train.Saver()
             session.run(tf.global_variables_initializer())
             saver.restore(session, logdir + "/data/model")
-            buf = generate(session, model, inputs, len(inputs), 0.5)
+            buf = generate(session, model, [inputs[0]], len(inputs), 0.5)
 
         save_filename = "test.mid"
         train_data_converter.generate_midi(save_filename, buf)
