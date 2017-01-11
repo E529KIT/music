@@ -12,7 +12,7 @@ from model import LSTM
 def generate(session, model, start_inputs, size, threshold_value):
     state = session.run(model.initial_state)
     fetches = [model.logits, model.last_state]
-    result = [start_inputs[0]]
+    result = [start_inputs[0][0]]
     logits = []
     start_input_size = len(start_inputs)
 
@@ -42,7 +42,7 @@ class Config:
 
 
 if __name__ == '__main__':
-    logdir = "../train_log/issue45/zanarukando/1/"
+    logdir = "log/1"
     with tf.Graph().as_default() as graph:
         config = Config
         load_filename = "../midi/train_zanarukandonite.midi"
