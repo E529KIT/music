@@ -49,6 +49,9 @@ def save_file(filename, data, velocity=100, instrument=pretty_midi.Instrument(pr
     else:
         raise Exception('instrument error')
 
+    # pretty_midi.Instrument(program=0)でInstrumentを生成した場合、初期化されずに前のデータが残っている
+    instrument.notes = []
+
     midi = pretty_midi.PrettyMIDI(initial_tempo=tempo)
     one_data_sec = 60.0 / tempo / 8.0
     # 音のなり始めるインデッックスを覚えておくためのもの
