@@ -42,5 +42,5 @@ if __name__ == '__main__':
             model = LSTM.LSTM(True, config, last_activation_function=tf.nn.sigmoid)
 
         with tf.Session() as session:
-            saver = tf.train.Saver()
+            saver = tf.train.Saver(tf.trainable_variables())
             train(session, model, inputs, labels, 1, saver, logdir, FLAGS.load_dir)
