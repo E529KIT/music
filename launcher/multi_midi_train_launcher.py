@@ -22,7 +22,7 @@ tf.app.flags.DEFINE_string(
 
 
 class Config:
-    batch_size = 2
+    batch_size = 5
     sequence_length = 20
     input_size = 128
     label_size = 128
