@@ -18,7 +18,7 @@ class Config:
     label_size = 8000
     cell_size_list = [4000]
     keep_prob = 1.0
-    optimizer_function = tf.train.AdamOptimizer(0.1)
+    optimizer_function = tf.train.GradientDescentOptimizer(0.1)
     clip_norm = 3
 
 
@@ -35,8 +35,8 @@ if __name__ == '__main__':
         with tf.Session() as session:
             saver = tf.train.Saver()
             session.run(tf.global_variables_initializer())
-            saver.restore(session, "noraml/data/1/model")
-            buf = generate(session, model, inputs[0][0], 294)
+            saver.restore(session, "log/1/data/model")
+            buf = generate(session, model, inputs, 294)
 
         write_filename = "/home/tatsuya/Music/created.wave"
         train_data_converter.generate(write_filename, 8000, buf)
