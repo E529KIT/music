@@ -23,7 +23,7 @@ def _init(session, saver, logdir, load_dir=None):
 def train(session, model, inputs, labels, epoch_num, saver, logdir, load_dir=None):
     train_writer = tf.summary.FileWriter(logdir, session.graph)
     merged = tf.summary.merge_all()
-    _init(session, logdir, load_dir)
+    _init(session, saver, logdir, load_dir)
 
     save_file = logdir + "/data/model"
     epoch = 0

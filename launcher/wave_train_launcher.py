@@ -9,6 +9,15 @@ from launcher.common.train import train
 from converter import train_data_converter
 from model import LSTM
 
+FLAGS = tf.app.flags.FLAGS
+tf.app.flags.DEFINE_string(
+    'logdir',
+    "log/1",
+    "log dir")
+tf.app.flags.DEFINE_string(
+    'load_dir',
+    None,
+    "load variables log dir")
 
 class Config:
     batch_size = 1
@@ -17,13 +26,12 @@ class Config:
     input_size = 8000
     label_size = 8000
     cell_size_list = [4000]
-    keep_prob = 1.0
-    optimizer_function = tf.train.AdamOptimizer(0.1)
+    keep_prob = 0.9
+    optimizer_function = tf.train.GradientDescentOptimizer(0.1)
     clip_norm = 3
 
 
 if __name__ == '__main__':
-    logdir = "data/1/"
     with tf.Graph().as_default() as graph:
         config = Config
 
@@ -36,5 +44,4 @@ if __name__ == '__main__':
 
         with tf.Session() as session:
             saver = tf.train.Saver()
-            saver.restore(session, "data/1/model")
-            train(session, model, inputs, labels, 1000, saver, "data/1")
+            train(session, model, inputs, labels, 1000, saver, FLAGS.logdir, FLAGS.load_dir)
