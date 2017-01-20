@@ -108,7 +108,7 @@ sequence_length = 5
 cell_size_list = [128]
 optimizer_function = tf.train.GradientDescentOptimizer(0.1)
 ```
-経過時間:10m38s
+学習時間:10m38s
 132.9K step
 lsoo:0.06
 
