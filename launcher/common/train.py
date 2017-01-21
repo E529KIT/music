@@ -74,7 +74,7 @@ def train_has_batch(session, model, train_data, epoch_num, batch_size, saver, lo
                 feed_dict[c] = state[i].c
                 feed_dict[h] = state[i].h
 
-        if global_step % 100 == 0:
+        if global_step % 1000 == 0:
             fetches = {
                 "train_opt": model.train_optimizer,
                 "global_step": model.global_step,
