@@ -8,7 +8,7 @@ import tensorflow as tf
 sys.path.append("../")
 
 from converter import train_data_converter
-from model import LSTM
+from model.LSTM_selectable_input_sequence_length import LSTM
 
 
 def generate(session, model, start_inputs, size, threshold_value):
@@ -41,6 +41,7 @@ class Config:
     keep_prob = 1.0
     optimizer_function = tf.train.GradientDescentOptimizer(0.1)
     clip_norm = 3
+    input_sequence_length = 1
 
 
 if __name__ == '__main__':
@@ -57,7 +58,7 @@ if __name__ == '__main__':
                   midi_files]
     with tf.Graph().as_default() as graph:
         with tf.variable_scope("model"):
-            model = LSTM.LSTM(True, config, True, tf.nn.sigmoid)
+            model = LSTM(True, config, True, tf.nn.sigmoid)
 
         with tf.Session() as session:
             saver = tf.train.Saver(tf.trainable_variables())
