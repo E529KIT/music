@@ -10,11 +10,13 @@ sys.path.append("../")
 from converter import train_data_converter
 from model import LSTM
 
+import numpy as np
+
 
 def generate(session, model, start_inputs, size, threshold_value, input_size=128):
     state = session.run(model.initial_state)
     fetches = [model.logits, model.last_state]
-    result = [start_inputs[0][0]]
+    result = [map(int, start_inputs[0][0])]
     logits = []
     start_input_size = len(start_inputs)
     threshold = tf.Variable([0.5] * input_size, trainable=False)
@@ -30,14 +32,15 @@ def generate(session, model, start_inputs, size, threshold_value, input_size=128
 
         def dfs(index, tensor):
             for i in range(index, input_size):
-                if logits[i] == 1:
+                if logits[i] == 1 and tensor[i] != 1:
                     copied_tenser = tensor[:]
                     copied_tenser[i] = 1
-                    e = session.run(eval_value, {model.inputs: [[tensor]], model.initial_state: state})
+                    e = session.run(eval_value, {model.inputs: [[copied_tenser]], model.initial_state: state})
                     eval_value_list.append((copied_tenser, e))
                     dfs(i + 1, copied_tenser)
 
-        dfs(0, logits)
+
+        dfs(0, np.array(logits) & np.array(result[-1]))
         if len(eval_value_list) == 0:
             max_tenser = logits
         else:
@@ -56,11 +59,11 @@ def generate(session, model, start_inputs, size, threshold_value, input_size=128
                 if logits[i] == 1:
                     copied_tenser = tensor[:]
                     copied_tenser[i] = 1
-                    e = session.run(eval_value, {model.inputs: [[tensor]], model.initial_state: state})
+                    e = session.run(eval_value, {model.inputs: [[copied_tenser]], model.initial_state: state})
                     eval_value_list.append((copied_tenser, e))
                     dfs(i + 1, copied_tenser)
 
-        dfs(0, logits)
+        dfs(0, np.array(logits) & np.array(result[-1]))
         if len(eval_value_list) == 0:
             max_tenser = logits
         else:
