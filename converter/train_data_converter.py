@@ -33,7 +33,7 @@ def generate(filename, sampling_rate, data):
     wave_converter.write_wave(filename, sampling_rate, data)
 
 
-def _div_inputs_and_label(data, sequence_length):
+def _div_inputs_and_label(data, sequence_length, input_sequence_length=None):
     '''
     dataをinputsとlabelsに分けて、sequence_lengthの配列に変換する
     余った部分は０うめする。
@@ -55,14 +55,16 @@ def _div_inputs_and_label(data, sequence_length):
     else:
         dataset_size = len(data) / sequence_length
     inputs = data[:-1].reshape(dataset_size, sequence_length, data.shape[1])
+    if input_sequence_length:
+        inputs = [input_[:input_sequence_length] for input_ in inputs]
     labels = data[1:].reshape(dataset_size, sequence_length, data.shape[1])
     return inputs, labels
 
 
-def create_midi_dataset(filename, sequence_length):
+def create_midi_dataset(filename, sequence_length, input_sequence_length=None):
     midi = midi_converter.load_file(filename)
     dataset = midi_converter.convert_PrettyMIDI_to_train_data(midi)
-    return [_div_inputs_and_label(one_data, sequence_length) for one_data in dataset]
+    return [_div_inputs_and_label(one_data, sequence_length, input_sequence_length) for one_data in dataset]
 
 
 def generate_midi(filename, data):
