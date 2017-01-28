@@ -3,7 +3,7 @@ import sys
 
 import tensorflow as tf
 
-sys.path.append("../")
+sys.path.append("../../")
 
 from launcher.common.generate import generate
 from converter import train_data_converter
