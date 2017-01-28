@@ -28,7 +28,7 @@ class Config:
 
 def main(argv):
     config = Config
-    midi_dir = "../midi/multi_train_midi"
+    midi_dir = "../../midi/multi_train_midi"
     midi_files = glob.glob(midi_dir + "/*.midi") + glob.glob(midi_dir + "/*.mid")
     train_data = create_midi_train_data_set_v2(midi_files, config.sequence_length, config.pitch_size, config.bar_size)
     with tf.variable_scope("model"):

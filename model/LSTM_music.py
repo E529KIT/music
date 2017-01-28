@@ -47,16 +47,18 @@ class LSTM:
         logits = tf.contrib.layers.fully_connected(inputs=outputs, num_outputs=label_size)
 
         # split pitch and bar to calc loss
-        pitch_labels_flat = tf.slice(labels, [0, 0, 0], [-1, -1, pitch_size])
+        pitch_labels = tf.slice(labels, [0, 0, 0], [-1, -1, pitch_size])
+        pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
         pitch_logits = tf.slice(logits, [0, 0, 0], [-1, -1, pitch_size])
         self._pitch_logits = pitch_logits = tf.nn.sigmoid(pitch_logits, "pitch_logits")
         pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
         self._pitch_loss = pitch_loss = tf.reduce_mean(tf.square(pitch_logits_flat - pitch_labels_flat), name="pitch_loss")
         tf.summary.scalar('pitch_loss', pitch_loss)
 
-        bar_labels_flat = tf.slice(labels, [0, 0, pitch_size], [-1, -1, bar_size])
+        bar_labels = tf.slice(labels, [0, 0, pitch_size], [-1, -1, bar_size])
+        bar_labels_flat = tf.reshape(bar_labels, [-1, bar_size])
         bar_logits = tf.slice(logits, [0, 0, pitch_size], [-1, -1, bar_size])
-        self._bar_logits = bar_logits = tf.nn.softmax(bar_logits, "bar_logits")
+        self._bar_logits = bar_logits = tf.nn.softmax(bar_logits)
         bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
         self._bar_loss = bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(bar_logits_flat), name="bar_loss")
         tf.summary.scalar('bar_loss', bar_loss)
