@@ -2,7 +2,8 @@ import glob
 import os
 import sys
 
-sys.path.append("../")
+sys.path.append("../../")
+
 import tensorflow as tf
 from converter import midi_converter
 

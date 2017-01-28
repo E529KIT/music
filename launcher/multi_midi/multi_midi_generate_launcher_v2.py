@@ -5,7 +5,7 @@ import sys
 
 import tensorflow as tf
 
-sys.path.append("../")
+sys.path.append("../../")
 
 from converter import train_data_converter
 from model import LSTM

@@ -77,6 +77,37 @@ def generate_midi(filename, data):
     data = map(lambda one_data: map(lambda x: 1 if x > 0.5 else 0, one_data), data)
     midi_converter.save_file(filename, data)
 
+
+def create_midi_train_data_set_v2(file_name_list, sequence_length, pitch_size, bar_size):
+    return [_create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size) for file_name in
+            file_name_list]
+
+
+def _create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size):
+    midi = midi_converter.load_file(file_name)
+    # midiの中に複数楽器ある場合でも最初の一つのみ選択する。
+    train_data = midi_converter.convert_PrettyMIDI_to_train_data(midi, False, bar_size)[0]
+
+    train_data_v2 = []
+    zero_time = 0
+    for one_data in train_data:
+        if sum(one_data) == 0:
+            zero_time += 1
+            continue
+
+        if len(train_data_v2) > 1:
+            # 次の音が鳴り始めるまで一生節以上あった場合も、なり始めを一生節後とする。
+            zero_time = min([zero_time, bar_size - 1])
+            train_data_v2[-1][pitch_size + zero_time] = 1
+
+        train_data_v2.append(np.zeros([pitch_size + bar_size]))
+        for pitch, on_off in enumerate(one_data):
+            if on_off == 1: train_data_v2[-1][pitch] = 1
+        zero_time = 0
+
+    return _div_inputs_and_label(train_data_v2, sequence_length)
+
+
 if __name__ == '__main__':
     load_filename = "/home/tatsuya/Music/1.wav"
     dataset = create_dataset([load_filename], 20, 8000)

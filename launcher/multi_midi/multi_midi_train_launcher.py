@@ -2,12 +2,12 @@
 import glob
 import sys
 
-sys.path.append("../")
+sys.path.append("../../")
 
 import tensorflow as tf
 
 from model.LSTM_selectable_input_sequence_length import LSTM
-from common.train import train_has_batch
+from launcher.common.train import train_has_batch
 from converter import train_data_converter
 
 FLAGS = tf.app.flags.FLAGS
