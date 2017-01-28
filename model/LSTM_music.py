@@ -24,52 +24,59 @@ class LSTM:
 
         self._global_step = global_step = tf.Variable(0, trainable=False, name='global_step', dtype=tf.int32)
 
-        if generate:
-            self._inputs = inputs = tf.placeholder(tf.float32, [batch_size, sequence_length, input_size],
-                                                   "generate_input")
-        else:
-            self._inputs = inputs = tf.placeholder(tf.float32, [batch_size, sequence_length, input_size],
-                                                   "input_data")
-        self._labels = labels = tf.placeholder(tf.float32, [batch_size, sequence_length, label_size], "labels")
+        with tf.name_scope("interface"):
+            if generate:
+                self._inputs = inputs = tf.placeholder(tf.float32, [batch_size, sequence_length, input_size],
+                                                       "generate_input")
+            else:
+                self._inputs = inputs = tf.placeholder(tf.float32, [batch_size, sequence_length, input_size],
+                                                       "input_data")
+            self._labels = labels = tf.placeholder(tf.float32, [batch_size, sequence_length, label_size], "labels")
 
-        cells = []
-        for cell_size in config.cell_size_list:
-            cell = tf.nn.rnn_cell.BasicLSTMCell(cell_size, forget_bias=0)
-            if config.keep_prob < 1:
-                cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=config.keep_prob)
-            cells.append(cell)
-        cell = tf.nn.rnn_cell.MultiRNNCell(cells, state_is_tuple=True)
-        self._initial_state = cell.zero_state(batch_size, dtype=tf.float32)
-        outputs, state = tf.nn.dynamic_rnn(cell, inputs, [sequence_length] * batch_size, self._initial_state,
-                                           parallel_iterations=1, swap_memory=True)
-        self._last_state = state
-
-        logits = tf.contrib.layers.fully_connected(inputs=outputs, num_outputs=label_size)
+        with tf.name_scope("hidden_layer") as scope:
+            cells = []
+            for cell_size in config.cell_size_list:
+                cell = tf.nn.rnn_cell.BasicLSTMCell(cell_size, forget_bias=0)
+                if config.keep_prob < 1:
+                    cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=config.keep_prob)
+                cells.append(cell)
+            cell = tf.nn.rnn_cell.MultiRNNCell(cells, state_is_tuple=True)
+            self._initial_state = cell.zero_state(batch_size, dtype=tf.float32)
+            outputs, state = tf.nn.dynamic_rnn(cell, inputs, [sequence_length] * batch_size, self._initial_state,
+                                               parallel_iterations=1, swap_memory=True, scope=scope)
+            self._last_state = state
+            with tf.name_scope("last_layer") as scope:
+                logits = tf.contrib.layers.fully_connected(inputs=outputs, num_outputs=label_size, scope=scope)
 
         # split pitch and bar to calc loss
-        pitch_labels = tf.slice(labels, [0, 0, 0], [-1, -1, pitch_size])
-        pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
-        pitch_logits = tf.slice(logits, [0, 0, 0], [-1, -1, pitch_size])
-        self._pitch_logits = pitch_logits = tf.nn.sigmoid(pitch_logits, "pitch_logits")
-        pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
-        self._pitch_loss = pitch_loss = tf.reduce_mean(tf.square(pitch_logits_flat - pitch_labels_flat), name="pitch_loss")
-        tf.summary.scalar('pitch_loss', pitch_loss)
+        with tf.name_scope("loss"):
+            pitch_labels = tf.slice(labels, [0, 0, 0], [-1, -1, pitch_size])
+            pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
+            pitch_logits = tf.slice(logits, [0, 0, 0], [-1, -1, pitch_size])
+            self._pitch_logits = pitch_logits = tf.nn.sigmoid(pitch_logits, "pitch_logits")
+            pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
+            self._pitch_loss = pitch_loss = tf.reduce_mean(tf.square(pitch_logits_flat - pitch_labels_flat), name="pitch_loss")
+            tf.summary.scalar('pitch_loss', pitch_loss)
 
-        bar_labels = tf.slice(labels, [0, 0, pitch_size], [-1, -1, bar_size])
-        bar_labels_flat = tf.reshape(bar_labels, [-1, bar_size])
-        bar_logits = tf.slice(logits, [0, 0, pitch_size], [-1, -1, bar_size])
-        self._bar_logits = bar_logits = tf.nn.softmax(bar_logits)
-        bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
-        self._bar_loss = bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(bar_logits_flat), name="bar_loss")
-        tf.summary.scalar('bar_loss', bar_loss)
+            bar_labels = tf.slice(labels, [0, 0, pitch_size], [-1, -1, bar_size])
+            bar_labels_flat = tf.reshape(bar_labels, [-1, bar_size])
+            bar_logits = tf.slice(logits, [0, 0, pitch_size], [-1, -1, bar_size])
+            self._bar_logits = bar_logits = tf.nn.softmax(bar_logits)
+            bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
+            self._bar_loss = bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(bar_logits_flat), name="bar_loss")
+            tf.summary.scalar('bar_loss', bar_loss)
 
-        self._loss = loss = config.pitch_loss_wight * pitch_loss + bar_loss
-        tf.summary.scalar('loss', loss)
+            self._loss = loss = config.pitch_loss_wight * pitch_loss + bar_loss
+            tf.summary.scalar('loss', loss)
 
-        params = tf.trainable_variables()
-        gradients = tf.gradients(loss, params)
-        clipped_gradients, _ = tf.clip_by_global_norm(gradients,
-                                                      config.clip_norm)
+        with tf.name_scope("train"):
+            params = tf.trainable_variables()
+            gradients = tf.gradients(loss, params)
+            clipped_gradients, _ = tf.clip_by_global_norm(gradients,
+                                                          config.clip_norm)
+            self._train_optimizer = config.optimizer_function.apply_gradients(zip(clipped_gradients, params),
+                                                                              global_step)
+
         for param, gradient in zip(params, clipped_gradients):
             abs_gradient = tf.abs(gradient)
             # not valid contain ":"
@@ -79,8 +86,6 @@ class LSTM:
                 tf.summary.scalar('gradient/max', tf.reduce_max(abs_gradient))
                 tf.summary.scalar('gradient/min', tf.reduce_min(abs_gradient))
                 tf.summary.scalar('gradient/mean', tf.reduce_mean(abs_gradient))
-        self._train_optimizer = config.optimizer_function.apply_gradients(zip(clipped_gradients, params),
-                                                                          global_step)
 
     @property
     def inputs(self):
