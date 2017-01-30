@@ -107,6 +107,17 @@ def _create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size)
 
     return _div_inputs_and_label(train_data_v2, sequence_length)
 
+def generate_midi_v2(file_name, data, pitch_size, bar_size):
+    generated_data = []
+    for one_data in data:
+        one_generated_data = one_data[:pitch_size]
+        bar_size = np.argmax(one_data[pitch_size:])
+        generated_data.append(one_generated_data)
+        for _ in range(bar_size):
+            generated_data.append(one_generated_data)
+    generate_midi(file_name, generated_data)
+
+
 
 if __name__ == '__main__':
     load_filename = "/home/tatsuya/Music/1.wav"

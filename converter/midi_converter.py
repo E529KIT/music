@@ -26,7 +26,7 @@ def convert_PrettyMIDI_to_train_data(midi, pitch_sequence=True, bar_size=32):
     tempo_change_times, tempi = midi.get_tempo_changes()
     if len(tempo_change_times) > 1:
         raise Exception("change tempo in music")
-    one_data_sec = 60 / tempi[0] / bar_size / 4
+    one_data_sec = 60 / tempi[0] / bar_size * 4
     train_data_size = int(round(end_time / one_data_sec))
 
     # 同じ楽器で演奏されているものはまとめる。

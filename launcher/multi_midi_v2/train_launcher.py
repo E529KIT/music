@@ -16,7 +16,7 @@ tf.app.flags.DEFINE_string('load_dir', None, "load variables log dir")
 
 class Config:
     batch_size = 5
-    sequence_length = 36
+    sequence_length = 32
     pitch_size = 128
     bar_size = 32
     cell_size_list = [160, 160]
