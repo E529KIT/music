@@ -55,7 +55,7 @@ class LSTM:
             pitch_logits = tf.slice(logits, [0, 0, 0], [-1, -1, pitch_size])
             self._pitch_logits = pitch_logits = tf.clip_by_value(pitch_logits, 0, 1, "pitch_logits")
             pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
-            self._pitch_loss = pitch_loss = tf.reduce_mean(tf.square(pitch_logits_flat - pitch_labels_flat), name="pitch_loss")
+            self._pitch_loss = pitch_loss = tf.reduce_mean(tf.pow(pitch_logits_flat - pitch_labels_flat, 4), name="pitch_loss")
             tf.summary.scalar('pitch_loss', pitch_loss)
 
             bar_labels = tf.slice(labels, [0, 0, pitch_size], [-1, -1, bar_size])

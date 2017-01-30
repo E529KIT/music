@@ -23,7 +23,7 @@ class Config:
     keep_prob = 0.9
     optimizer_function = tf.train.AdamOptimizer(0.1)
     clip_norm = 3
-    pitch_loss_wight = 1
+    pitch_loss_wight = 20
 
 
 def main(argv):
