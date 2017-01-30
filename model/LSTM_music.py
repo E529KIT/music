@@ -53,7 +53,7 @@ class LSTM:
             pitch_labels = tf.slice(labels, [0, 0, 0], [-1, -1, pitch_size])
             pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
             pitch_logits = tf.slice(logits, [0, 0, 0], [-1, -1, pitch_size])
-            self._pitch_logits = pitch_logits = tf.nn.sigmoid(pitch_logits, "pitch_logits")
+            self._pitch_logits = pitch_logits = tf.clip_by_value(pitch_logits, 0, 1, "pitch_logits")
             pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
             self._pitch_loss = pitch_loss = tf.reduce_mean(tf.square(pitch_logits_flat - pitch_labels_flat), name="pitch_loss")
             tf.summary.scalar('pitch_loss', pitch_loss)
@@ -65,6 +65,8 @@ class LSTM:
             bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
             self._bar_loss = bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(bar_logits_flat), name="bar_loss")
             tf.summary.scalar('bar_loss', bar_loss)
+
+            self._logits = tf.concat(2, [pitch_logits, bar_logits])
 
             self._loss = loss = config.pitch_loss_wight * pitch_loss + bar_loss
             tf.summary.scalar('loss', loss)
@@ -130,3 +132,7 @@ class LSTM:
     @property
     def bar_logits(self):
         return self._bar_logits
+
+    @property
+    def logits(self):
+        return self._logits
