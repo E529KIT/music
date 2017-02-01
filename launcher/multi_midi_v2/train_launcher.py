@@ -21,7 +21,7 @@ class Config:
     bar_size = 32
     cell_size_list = [160, 160]
     keep_prob = 0.9
-    optimizer_function = tf.train.AdamOptimizer(0.1)
+    optimizer_function = tf.train.GradientDescentOptimizer(0.1)
     clip_norm = 3
     pitch_loss_wight = 20
 

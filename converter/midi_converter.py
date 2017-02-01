@@ -54,7 +54,7 @@ def convert_PrettyMIDI_to_train_data(midi, pitch_sequence=True, bar_size=32):
     return train_data
 
 
-def save_file(filename, data, velocity=100, instrument=pretty_midi.Instrument(program=0), tempo=120):
+def save_file(filename, data, velocity=100, instrument=pretty_midi.Instrument(program=0), tempo=120, bar_size=32):
     if isinstance(instrument, pretty_midi.Instrument):
         instrument = instrument
     elif isinstance(instrument, str):
@@ -66,7 +66,7 @@ def save_file(filename, data, velocity=100, instrument=pretty_midi.Instrument(pr
     instrument.notes = []
 
     midi = pretty_midi.PrettyMIDI(initial_tempo=tempo)
-    one_data_sec = 60.0 / tempo / 8.0
+    one_data_sec = 60.0 / tempo / bar_size * 4.0
     # 音のなり始めるインデッックスを覚えておくためのもの
     start_time_list = np.zeros(128)
     max_time = 0
