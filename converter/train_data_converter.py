@@ -67,7 +67,7 @@ def create_midi_dataset(filename, sequence_length, input_sequence_length=None):
     return [_div_inputs_and_label(one_data, sequence_length, input_sequence_length) for one_data in dataset]
 
 
-def generate_midi(filename, data):
+def generate_midi(filename, data, bar_size=32):
     '''
     0.5以上のものを1それ以下のものを0に変え、そのデータからmidiを作成する。
     :param filename:
@@ -75,7 +75,7 @@ def generate_midi(filename, data):
     :return: None
     '''
     data = map(lambda one_data: map(lambda x: 1 if x > 0.5 else 0, one_data), data)
-    midi_converter.save_file(filename, data)
+    midi_converter.save_file(filename, data, bar_size=bar_size)
 
 
 def create_midi_train_data_set_v2(file_name_list, sequence_length, pitch_size, bar_size):
@@ -111,11 +111,11 @@ def generate_midi_v2(file_name, data, pitch_size, bar_size):
     generated_data = []
     for one_data in data:
         one_generated_data = one_data[:pitch_size]
-        bar_size = np.argmax(one_data[pitch_size:])
+        bar_index = np.argmax(one_data[pitch_size:])
         generated_data.append(one_generated_data)
-        for _ in range(bar_size):
+        for _ in range(bar_index):
             generated_data.append(one_generated_data)
-    generate_midi(file_name, generated_data)
+    generate_midi(file_name, generated_data, bar_size)
 
 
 
