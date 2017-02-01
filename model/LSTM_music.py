@@ -34,17 +34,30 @@ class LSTM:
             self._labels = labels = tf.placeholder(tf.float32, [batch_size, sequence_length, label_size], "labels")
 
         with tf.name_scope("hidden_layer") as scope:
-            cells = []
-            for cell_size in config.cell_size_list:
-                cell = tf.nn.rnn_cell.BasicLSTMCell(cell_size, forget_bias=0)
-                if config.keep_prob < 1:
-                    cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=config.keep_prob)
-                cells.append(cell)
-            cell = tf.nn.rnn_cell.MultiRNNCell(cells, state_is_tuple=True)
-            self._initial_state = cell.zero_state(batch_size, dtype=tf.float32)
-            outputs, state = tf.nn.dynamic_rnn(cell, inputs, [sequence_length] * batch_size, self._initial_state,
-                                               parallel_iterations=1, swap_memory=True, scope=scope)
-            self._last_state = state
+            with tf.name_scope("cnn"):
+                filter_width = 13
+                pitch_inputs = tf.slice(inputs, [0, 0, 0], [-1, -1, pitch_size])
+                pitch_inputs_flat = tf.reshape(pitch_inputs, [-1, pitch_size, 1])
+                cnn_w = tf.get_variable("wight", [filter_width, 1, 1], tf.float32)
+                cnn_out = tf.nn.conv1d(pitch_inputs_flat, cnn_w, 1, 'VALID')
+                cnn_out = tf.nn.relu(cnn_out)
+                cnn_out = tf.reshape(cnn_out, [batch_size, sequence_length, pitch_size - filter_width + 1])
+                bar_input = tf.slice(inputs, [0, 0, pitch_size], [-1, -1, bar_size])
+                cnn_out = tf.concat(2, [cnn_out, bar_input])
+
+            with tf.name_scope("LSTM"):
+                cells = []
+                for cell_size in config.cell_size_list:
+                    cell = tf.nn.rnn_cell.BasicLSTMCell(cell_size, forget_bias=0)
+                    if config.keep_prob < 1:
+                        cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=config.keep_prob)
+                    cells.append(cell)
+                cell = tf.nn.rnn_cell.MultiRNNCell(cells, state_is_tuple=True)
+                self._initial_state = cell.zero_state(batch_size, dtype=tf.float32)
+                outputs, state = tf.nn.dynamic_rnn(cell, cnn_out, [sequence_length] * batch_size, self._initial_state,
+                                                   parallel_iterations=1, swap_memory=True, scope=scope)
+                self._last_state = state
+
             with tf.name_scope("last_layer") as scope:
                 logits = tf.contrib.layers.fully_connected(inputs=outputs, num_outputs=label_size, scope=scope)
 
@@ -55,7 +68,8 @@ class LSTM:
             pitch_logits = tf.slice(logits, [0, 0, 0], [-1, -1, pitch_size])
             self._pitch_logits = pitch_logits = tf.clip_by_value(pitch_logits, 0, 1, "pitch_logits")
             pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
-            self._pitch_loss = pitch_loss = tf.reduce_mean(tf.pow(pitch_logits_flat - pitch_labels_flat, 4), name="pitch_loss")
+            self._pitch_loss = pitch_loss = tf.reduce_mean(tf.pow(pitch_logits_flat - pitch_labels_flat, 4),
+                                                           name="pitch_loss")
             tf.summary.scalar('pitch_loss', pitch_loss)
 
             bar_labels = tf.slice(labels, [0, 0, pitch_size], [-1, -1, bar_size])
