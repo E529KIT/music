@@ -15,12 +15,12 @@ tf.app.flags.DEFINE_string('load_dir', None, "load variables log dir")
 
 
 class Config:
-    batch_size = 5
+    batch_size = 10
     sequence_length = 32
     pitch_size = 128
     bar_size = 32
     cell_size_list = [160, 160]
-    keep_prob = 0.9
+    keep_prob = 0.7
     optimizer_function = tf.train.GradientDescentOptimizer(0.1)
     clip_norm = 3
     pitch_loss_wight = 20
@@ -28,7 +28,7 @@ class Config:
 
 def main(argv):
     config = Config
-    midi_dir = "../../midi/multi_train_midi"
+    midi_dir = "../../midi/multi_train_midi_v2"
     midi_files = glob.glob(midi_dir + "/*.midi") + glob.glob(midi_dir + "/*.mid")
     train_data = create_midi_train_data_set_v2(midi_files, config.sequence_length, config.pitch_size, config.bar_size)
     model = LSTM(config)
