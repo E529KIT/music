@@ -36,12 +36,14 @@ class LSTM:
         with tf.name_scope("hidden_layer") as scope:
             with tf.name_scope("cnn") as cnn_scope:
                 filter_width = 13
+                cnn_out_size = 1
                 pitch_inputs = tf.slice(inputs, [0, 0, 0], [-1, -1, pitch_size])
                 pitch_inputs_flat = tf.reshape(pitch_inputs, [-1, pitch_size, 1])
                 with tf.variable_scope(cnn_scope):
-                    cnn_w = tf.get_variable("weight", [filter_width, 1, 1], tf.float32)
+                    cnn_w = tf.get_variable("weight", [filter_width, 1, cnn_out_size], tf.float32)
+                    cnn_b = tf.get_variable("bias", [cnn_out_size], tf.float32)
                 cnn_out = tf.nn.conv1d(pitch_inputs_flat, cnn_w, 1, 'VALID')
-                cnn_out = tf.nn.relu(cnn_out)
+                cnn_out = tf.nn.relu(cnn_out + cnn_b)
                 cnn_out = tf.reshape(cnn_out, [batch_size, sequence_length, pitch_size - filter_width + 1])
                 bar_input = tf.slice(inputs, [0, 0, pitch_size], [-1, -1, bar_size])
                 cnn_out = tf.concat(2, [cnn_out, bar_input])
