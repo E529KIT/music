@@ -1,5 +1,7 @@
 # coding=utf-8
 import numpy as np
+import pretty_midi
+
 import complex_converter, wave_converter, midi_converter
 
 
@@ -85,7 +87,32 @@ def create_midi_train_data_set_v2(file_name_list, sequence_length, pitch_size, b
 
 def _create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size):
     midi = midi_converter.load_file(file_name)
-    # midiの中に複数楽器ある場合でも最初の一つのみ選択する。
+    end_time = midi.get_end_time()
+    if len(midi.instruments) != 1:
+        raise Exception("has many instruments")
+    tempo_change_times, tempi = midi.get_tempo_changes()
+    if len(tempo_change_times) > 1:
+        raise Exception("change tempo in music")
+
+    instrument = midi.instruments[0]
+    one_data_sec = 60 / tempi[0] / bar_size * 4
+    notes_map = [None] * (end_time * one_data_sec)
+    for note in instrument.notes:
+        start_time = int(round(note.start / one_data_sec))
+        end_time = int(round(note.end / one_data_sec))
+        if notes_map[start_time] is None:
+            notes_map[start_time] = (0, [])
+        max_end_time, notes = notes_map[start_time]
+        notes.append(note)
+        notes_map[start_time] = (max(max_end_time, end_time), notes)
+
+    train_data = []
+    for end_time, notes in range(len(notes_map)):
+        pitch_zero_data = [0] * pitch_size
+        bar_zero_data = [0] * bar_size
+        end_time, notes = notes_map[i]
+        if i == len(notes_map) - 1:
+
     train_data = midi_converter.convert_PrettyMIDI_to_train_data(midi, False, bar_size)[0]
 
     train_data_v2 = []
@@ -107,16 +134,27 @@ def _create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size)
 
     return _div_inputs_and_label(train_data_v2, sequence_length)
 
-def generate_midi_v2(file_name, data, pitch_size, bar_size):
-    generated_data = []
-    for one_data in data:
-        one_generated_data = one_data[:pitch_size]
-        bar_index = np.argmax(one_data[pitch_size:])
-        generated_data.append(one_generated_data)
-        for _ in range(bar_index):
-            generated_data.append(one_generated_data)
-    generate_midi(file_name, generated_data, bar_size)
 
+def generate_midi_v2(file_name, data, pitch_size, bar_size, velocity=100, instrument=0, tempo=120):
+    if isinstance(instrument, int):
+        instrument = pretty_midi.Instrument(program=instrument)
+    elif isinstance(instrument, str):
+        instrument = pretty_midi.instrument_name_to_program(instrument)
+
+    one_data_sec = 60.0 / tempo / bar_size * 4.0
+    current_time = 0.0
+    for one_data in data:
+        bar = np.argmax(one_data[pitch_size:]) + 1
+        bar_time = bar * one_data_sec
+        start_time = current_time
+        end_time = current_time + bar_time
+        for pitch, trigger in enumerate(one_data[:pitch_size]):
+            if trigger == 1:
+                note = pretty_midi.Note(velocity, pitch, start_time, end_time)
+                instrument.notes.append(note)
+        print start_time, end_time
+        current_time += bar_time
+    midi_converter.save_file_v2(file_name, [instrument], tempo)
 
 
 if __name__ == '__main__':
