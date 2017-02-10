@@ -1,3 +1,4 @@
+# coding=utf-8
 import tensorflow as tf
 
 
@@ -66,15 +67,6 @@ class LSTM:
 
         # split pitch and bar to calc loss
         with tf.name_scope("loss"):
-            pitch_labels = tf.slice(labels, [0, 0, 0], [-1, -1, pitch_size])
-            pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
-            pitch_logits = tf.slice(logits, [0, 0, 0], [-1, -1, pitch_size])
-            self._pitch_logits = pitch_logits = tf.clip_by_value(pitch_logits, 0, 1, "pitch_logits")
-            pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
-            self._pitch_loss = pitch_loss = tf.reduce_mean(tf.pow(pitch_logits_flat - pitch_labels_flat, 4),
-                                                           name="pitch_loss")
-            tf.summary.scalar('pitch_loss', pitch_loss)
-
             bar_labels = tf.slice(labels, [0, 0, pitch_size], [-1, -1, bar_size])
             bar_labels_flat = tf.reshape(bar_labels, [-1, bar_size])
             bar_logits = tf.slice(logits, [0, 0, pitch_size], [-1, -1, bar_size])
@@ -82,6 +74,17 @@ class LSTM:
             bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
             self._bar_loss = bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(bar_logits_flat), name="bar_loss")
             tf.summary.scalar('bar_loss', bar_loss)
+
+            pitch_labels = tf.slice(labels, [0, 0, 0], [-1, -1, pitch_size])
+            pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
+            pitch_logits = tf.slice(logits, [0, 0, 0], [-1, -1, pitch_size])
+            self._pitch_logits = pitch_logits = tf.clip_by_value(pitch_logits, 0, 1, "pitch_logits")
+            pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
+            # 全部0のデータ（余剰データ）はlossの値に含めない
+            trigger_loss = tf.reshape(tf.reduce_max(bar_labels_flat, axis=1), [-1, 1])
+            self._pitch_loss = pitch_loss = tf.reduce_mean(trigger_loss * tf.pow(pitch_logits_flat - pitch_labels_flat, 4),
+                                                           name="pitch_loss")
+            tf.summary.scalar('pitch_loss', pitch_loss)
 
             self._logits = tf.concat(2, [pitch_logits, bar_logits])
 
