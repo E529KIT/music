@@ -2,7 +2,9 @@
 import numpy as np
 import pretty_midi
 
-import complex_converter, wave_converter, midi_converter
+import complex_converter
+import midi_converter
+import wave_converter
 
 
 def create_dataset(filename_list, sequence_length, sampling_rate):
@@ -85,25 +87,32 @@ def create_midi_train_data_set_v2(file_name_list, sequence_length, pitch_size, b
             file_name_list]
 
 
+def _midi_program_valid(midi):
+    program_set = set()
+    for instrument in midi.instruments:
+        program_set.add(instrument.program)
+    return len(program_set) == 1
+
+
 def _create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size):
     midi = midi_converter.load_file(file_name)
-    if len(midi.instruments) != 1:
+    if not _midi_program_valid(midi):
         raise Exception("has many instruments")
     tempo_change_times, tempi = midi.get_tempo_changes()
     if len(tempo_change_times) > 1:
         raise Exception("change tempo in music")
 
-    instrument = midi.instruments[0]
     one_data_sec = 60 / tempi[0] / bar_size * 4
     notes_map = {}
-    for note in instrument.notes:
-        start_time = int(round(note.start / one_data_sec))
-        end_time = int(round(note.end / one_data_sec))
-        if start_time not in notes_map:
-            notes_map[start_time] = (end_time, [])
-        max_end_time, notes = notes_map[start_time]
-        notes.append(note)
-        notes_map[start_time] = (max(max_end_time, end_time), notes)
+    for instrument in midi.instruments:
+        for note in instrument.notes:
+            start_time = int(round(note.start / one_data_sec))
+            end_time = int(round(note.end / one_data_sec))
+            if start_time not in notes_map:
+                notes_map[start_time] = (end_time, [])
+            max_end_time, notes = notes_map[start_time]
+            notes.append(note)
+            notes_map[start_time] = (max(max_end_time, end_time), notes)
 
     sorted_notes = sorted(notes_map.items(), key=lambda x: x[0])
     train_data = []
@@ -122,7 +131,7 @@ def _create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size)
         bar_data = [0] * bar_size
         if i < len(sorted_notes) - 1:
             end_time = min([end_time, sorted_notes[i + 1][0]])
-        bar_index = min([end_time - start_time - 1, bar_size -1])
+        bar_index = min([end_time - start_time - 1, bar_size - 1])
         bar_data[bar_index] = 1
 
         train_data.append(pitch_data + bar_data)
