@@ -83,8 +83,13 @@ def generate_midi(filename, data, bar_size=32):
 
 
 def create_midi_train_data_set_v2(file_name_list, sequence_length, pitch_size, bar_size):
-    return [_create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size) for file_name in
-            file_name_list]
+    train_data = []
+    for file_name in file_name_list:
+        try:
+            train_data.append(_create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size))
+        except:
+            pass
+    return train_data
 
 
 def _midi_program_valid(midi):
@@ -98,6 +103,7 @@ def _create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size)
     midi = midi_converter.load_file(file_name)
     if not _midi_program_valid(midi):
         raise Exception("has many instruments")
+
     tempo_change_times, tempi = midi.get_tempo_changes()
     if len(tempo_change_times) > 1:
         raise Exception("change tempo in music")
