@@ -69,7 +69,6 @@ def save_file(filename, data, velocity=100, instrument=pretty_midi.Instrument(pr
     one_data_sec = 60.0 / tempo / bar_size * 4.0
     # 音のなり始めるインデッックスを覚えておくためのもの
     start_time_list = np.zeros(128)
-    max_time = 0
     for i, pitches in enumerate(data):
         for pitch, on_off in enumerate(pitches):
             # todo: データの閾値等どうするか
@@ -81,13 +80,17 @@ def save_file(filename, data, velocity=100, instrument=pretty_midi.Instrument(pr
                 if start_time_list[pitch] != 0:
                     start_time = start_time_list[pitch] * one_data_sec
                     end_time = i * one_data_sec
-                    max_time = max(max_time, end_time)
                     note = pretty_midi.Note(velocity, pitch, start_time, end_time)
                     instrument.notes.append(note)
                     start_time_list[pitch] = 0
     midi.instruments.append(instrument)
     midi.write(filename)
 
+
+def save_file_v2(filename, instruments, tempo=120):
+    midi = pretty_midi.PrettyMIDI(initial_tempo=tempo)
+    midi.instruments.extend(instruments)
+    midi.write(filename)
 
 if __name__ == '__main__':
     load_filename = "../midi/zanarukandonite.midi"

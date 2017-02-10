@@ -1,5 +1,7 @@
 # coding=utf-8
 import numpy as np
+import pretty_midi
+
 import complex_converter, wave_converter, midi_converter
 
 
@@ -85,38 +87,67 @@ def create_midi_train_data_set_v2(file_name_list, sequence_length, pitch_size, b
 
 def _create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size):
     midi = midi_converter.load_file(file_name)
-    # midiの中に複数楽器ある場合でも最初の一つのみ選択する。
-    train_data = midi_converter.convert_PrettyMIDI_to_train_data(midi, False, bar_size)[0]
+    if len(midi.instruments) != 1:
+        raise Exception("has many instruments")
+    tempo_change_times, tempi = midi.get_tempo_changes()
+    if len(tempo_change_times) > 1:
+        raise Exception("change tempo in music")
 
-    train_data_v2 = []
-    zero_time = 0
-    for one_data in train_data:
-        if sum(one_data) == 0:
-            zero_time += 1
-            continue
+    instrument = midi.instruments[0]
+    one_data_sec = 60 / tempi[0] / bar_size * 4
+    notes_map = {}
+    for note in instrument.notes:
+        start_time = int(round(note.start / one_data_sec))
+        end_time = int(round(note.end / one_data_sec))
+        if start_time not in notes_map:
+            notes_map[start_time] = (end_time, [])
+        max_end_time, notes = notes_map[start_time]
+        notes.append(note)
+        notes_map[start_time] = (max(max_end_time, end_time), notes)
 
-        if len(train_data_v2) > 1:
-            # 次の音が鳴り始めるまで一生節以上あった場合も、なり始めを一生節後とする。
-            zero_time = min([zero_time, bar_size - 1])
-            train_data_v2[-1][pitch_size + zero_time] = 1
+    sorted_notes = sorted(notes_map.items(), key=lambda x: x[0])
+    train_data = []
+    for i, (start_time, (end_time, notes)) in enumerate(sorted_notes):
+        if i != 0 and sorted_notes[i - 1][1][0] < start_time:
+            pitch_data = [0] * pitch_size
+            bar_data = [0] * bar_size
+            bar_index = min([bar_size - 1, start_time - sorted_notes[i - 1][1][0]])
+            bar_data[bar_index] = 1
+            train_data.append(pitch_data + bar_data)
 
-        train_data_v2.append(np.zeros([pitch_size + bar_size]))
-        for pitch, on_off in enumerate(one_data):
-            if on_off == 1: train_data_v2[-1][pitch] = 1
-        zero_time = 0
+        pitch_data = [0] * pitch_size
+        for note in notes:
+            pitch_data[note.pitch] = 1
 
-    return _div_inputs_and_label(train_data_v2, sequence_length)
+        bar_data = [0] * bar_size
+        if i < len(sorted_notes) - 1:
+            end_time = min([end_time, sorted_notes[i + 1][0]])
+        bar_index = min([end_time - start_time - 1, bar_size -1])
+        bar_data[bar_index] = 1
 
-def generate_midi_v2(file_name, data, pitch_size, bar_size):
-    generated_data = []
+        train_data.append(pitch_data + bar_data)
+    return _div_inputs_and_label(train_data, sequence_length)
+
+
+def generate_midi_v2(file_name, data, pitch_size, bar_size, velocity=100, instrument=0, tempo=120):
+    if isinstance(instrument, int):
+        instrument = pretty_midi.Instrument(program=instrument)
+    elif isinstance(instrument, str):
+        instrument = pretty_midi.instrument_name_to_program(instrument)
+
+    one_data_sec = 60.0 / tempo / bar_size * 4.0
+    current_time = 0.0
     for one_data in data:
-        one_generated_data = one_data[:pitch_size]
-        bar_index = np.argmax(one_data[pitch_size:])
-        generated_data.append(one_generated_data)
-        for _ in range(bar_index):
-            generated_data.append(one_generated_data)
-    generate_midi(file_name, generated_data, bar_size)
-
+        bar = np.argmax(one_data[pitch_size:]) + 1
+        bar_time = bar * one_data_sec
+        start_time = current_time
+        end_time = current_time + bar_time
+        for pitch, trigger in enumerate(one_data[:pitch_size]):
+            if trigger == 1:
+                note = pretty_midi.Note(velocity, pitch, start_time, end_time)
+                instrument.notes.append(note)
+        current_time += bar_time
+    midi_converter.save_file_v2(file_name, [instrument], tempo)
 
 
 if __name__ == '__main__':
