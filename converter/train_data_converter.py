@@ -99,19 +99,19 @@ def _create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size)
     for note in instrument.notes:
         start_time = int(round(note.start / one_data_sec))
         end_time = int(round(note.end / one_data_sec))
-        if notes_map not in start_time:
-            notes_map[start_time] = (start_time, end_time, [])
-        _, max_end_time, notes = notes_map[start_time]
+        if start_time not in notes_map:
+            notes_map[start_time] = (end_time, [])
+        max_end_time, notes = notes_map[start_time]
         notes.append(note)
-        notes_map[start_time] = (start_time, max(max_end_time, end_time), notes)
+        notes_map[start_time] = (max(max_end_time, end_time), notes)
 
-    sorted_notes = sorted(notes_map, key=lambda x: x[0])
+    sorted_notes = sorted(notes_map.items(), key=lambda x: x[0])
     train_data = []
     for i, (start_time, (end_time, notes)) in enumerate(sorted_notes):
-        if i != 0 and sorted_notes[i - 1][1] < start_time:
+        if i != 0 and sorted_notes[i - 1][1][0] < start_time:
             pitch_data = [0] * pitch_size
             bar_data = [0] * bar_size
-            bar_index = min([bar_size - 1, start_time - sorted_notes[i - 1][1]])
+            bar_index = min([bar_size - 1, start_time - sorted_notes[i - 1][1][0]])
             bar_data[bar_index] = 1
             train_data.append(pitch_data + bar_data)
 
@@ -121,12 +121,11 @@ def _create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size)
 
         bar_data = [0] * bar_size
         if i < len(sorted_notes) - 1:
-            end_time = min([end_time, sorted_notes[i + 1]])
-        bar_index = min([start_time - end_time, bar_size -1])
+            end_time = min([end_time, sorted_notes[i + 1][0]])
+        bar_index = min([end_time - start_time - 1, bar_size -1])
         bar_data[bar_index] = 1
 
         train_data.append(pitch_data + bar_data)
-
     return _div_inputs_and_label(train_data, sequence_length)
 
 
@@ -147,7 +146,6 @@ def generate_midi_v2(file_name, data, pitch_size, bar_size, velocity=100, instru
             if trigger == 1:
                 note = pretty_midi.Note(velocity, pitch, start_time, end_time)
                 instrument.notes.append(note)
-        print start_time, end_time
         current_time += bar_time
     midi_converter.save_file_v2(file_name, [instrument], tempo)
 
