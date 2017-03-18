@@ -13,9 +13,6 @@ WAVEからの生成をおこなっていたが、モデルをかなり多きく�
 * 一つの音楽のみを過学習させ、それに対してdrop outをかけて生成する（従来の逆のアプローチ）
 * DQNを用いた音楽生成時に、今の状態でこの音（複数音）を鳴らした時の評価を求めるモデルを作成する
 
-### 学内URL
-* [PCの状態](http://hubble.ic.kanazawa-it.ac.jp/zabbix)(pascal2)
-
 ### Magentaについて
 * [DQN](http://qiita.com/gdmiwasawa/items/362664b2e742281c1683)
 
