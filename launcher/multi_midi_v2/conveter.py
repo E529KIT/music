@@ -10,7 +10,7 @@ from launcher.common.sequence_example import create_sequence_example
 
 
 def main(argv):
-    sequence_length = 40
+    sequence_length = 100
     pitch_size = 128
     bar_size = 32
     midi_dir = "../../midi/classic/BACH"
