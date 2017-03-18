@@ -22,7 +22,7 @@ class DefaultConfig:
 
 
 class Model:
-    def __init__(self, config=DefaultConfig, generate=False):
+    def __init__(self, config=DefaultConfig, generate=False, inputs=None, labels=None, activate_function=tf.nn.relu):
         self.batch_size = batch_size = config.batch_size
         self.sequence_length = sequence_length = config.sequence_length
         pitch_size = config.pitch_size
@@ -37,9 +37,13 @@ class Model:
                 self._inputs = inputs = tf.placeholder(tf.float32, [batch_size, sequence_length, input_size],
                                                        "generate_input")
             else:
-                self._inputs = inputs = tf.placeholder(tf.float32, [batch_size, sequence_length, input_size],
-                                                       "input_data")
-            self._labels = labels = tf.placeholder(tf.float32, [batch_size, sequence_length, label_size], "labels")
+                if inputs is None:
+                    inputs = tf.placeholder(tf.float32, [batch_size, sequence_length, input_size],
+                                            "input_data")
+                self._inputs = inputs
+            if labels is None:
+                labels = tf.placeholder(tf.float32, [batch_size, sequence_length, label_size], "labels")
+            self._labels = labels
 
         with tf.name_scope("hidden_layer") as scope:
             with tf.name_scope("cnn") as cnn_scope:
@@ -52,19 +56,19 @@ class Model:
                     cnn_w = tf.get_variable("weight", [filter_width, 1, cnn_out_size], tf.float32)
                     cnn_b = tf.get_variable("bias", [cnn_out_size], tf.float32)
                 cnn_out = tf.nn.conv1d(pitch_inputs_flat, cnn_w, 1, 'SAME') + cnn_b
-                cnn_out = tf.nn.relu(cnn_out + cnn_b)
-                cnn_out = tf.reshape(cnn_out, [batch_size, sequence_length, pitch_size - filter_width + 1])
+                cnn_out = activate_function(cnn_out + cnn_b)
+                cnn_out = tf.reshape(cnn_out, [batch_size, sequence_length, -1])
                 bar_input = tf.slice(inputs, [0, 0, pitch_size], [-1, -1, bar_size])
-                cnn_out = tf.concat(2, [cnn_out, bar_input])
+                cnn_out = tf.concat([cnn_out, bar_input], 2)
 
             with tf.name_scope("LSTM"):
                 cells = []
                 for cell_size in config.cell_size_list:
-                    cell = tf.nn.rnn_cell.BasicLSTMCell(cell_size, forget_bias=0)
+                    cell = tf.contrib.rnn.BasicLSTMCell(cell_size, forget_bias=0, activation=activate_function)
                     if config.keep_prob < 1:
-                        cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=config.keep_prob)
+                        cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=config.keep_prob)
                     cells.append(cell)
-                cell = tf.nn.rnn_cell.MultiRNNCell(cells, state_is_tuple=True)
+                cell = tf.contrib.rnn.MultiRNNCell(cells, state_is_tuple=True)
                 self._initial_state = cell.zero_state(batch_size, dtype=tf.float32)
                 outputs, state = tf.nn.dynamic_rnn(cell, cnn_out, [sequence_length] * batch_size, self._initial_state,
                                                    parallel_iterations=1, swap_memory=True, scope=scope)
@@ -90,11 +94,12 @@ class Model:
             pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
             # 全部0のデータ（余剰データ）はlossの値に含めない
             trigger_loss = tf.reshape(tf.reduce_max(bar_labels_flat, axis=1), [-1, 1])
-            self._pitch_loss = pitch_loss = tf.reduce_mean(trigger_loss * tf.pow(pitch_logits_flat - pitch_labels_flat, 4),
-                                                           name="pitch_loss")
+            self._pitch_loss = pitch_loss = tf.reduce_mean(
+                trigger_loss * tf.pow(pitch_logits_flat - pitch_labels_flat, 4),
+                name="pitch_loss")
             tf.summary.scalar('pitch_loss', pitch_loss)
 
-            self._logits = tf.concat(2, [pitch_logits, bar_logits])
+            self._logits = tf.concat([pitch_logits, bar_logits], 2)
 
             self._loss = loss = config.pitch_loss_wight * pitch_loss + bar_loss
             tf.summary.scalar('loss', loss)
