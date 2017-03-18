@@ -94,3 +94,4 @@ MNIST_data
 log
 *.pyc
 test_space/
+/midi
