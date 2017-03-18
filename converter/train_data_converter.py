@@ -91,6 +91,17 @@ def create_midi_train_data_set_v2(file_name_list, sequence_length, pitch_size, b
             pass
     return train_data
 
+def create_midi_train_data_set_with_file_name_v2(file_name_list, sequence_length, pitch_size, bar_size):
+    train_data = []
+    success_file_names = []
+    for file_name in file_name_list:
+        try:
+            train_data.append(_create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size))
+            success_file_names.append(file_name)
+        except:
+            pass
+    return train_data, success_file_names
+
 
 def _midi_program_valid(midi):
     program_set = set()
