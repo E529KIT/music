@@ -84,7 +84,8 @@ class Model:
             bar_logits = tf.slice(logits, [0, 0, pitch_size], [-1, -1, bar_size])
             self._bar_logits = bar_logits = tf.nn.softmax(bar_logits)
             bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
-            self._bar_loss = bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(bar_logits_flat), name="bar_loss")
+            self._bar_loss = bar_loss = tf.reduce_mean(
+                -bar_labels_flat * tf.log(tf.clip_by_value(bar_logits_flat, 1e-10, 1.0)), name="bar_loss")
             tf.summary.scalar('bar_loss', bar_loss)
 
             pitch_labels = tf.slice(labels, [0, 0, 0], [-1, -1, pitch_size])

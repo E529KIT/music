@@ -31,10 +31,10 @@ def main(argv):
         config = Config
         file_list = glob.glob("./train_data/*")
         inputs, labels, _ = get_padded_batch(file_list, config.batch_size, 160, 160, config.sequence_length)
-        model = Model(config, inputs=inputs, labels=labels)
+        model = Model(config, inputs=inputs, labels=labels, activate_function=tf.nn.sigmoid)
 
     sv = tf.train.Supervisor(graph=graph, logdir=FLAGS.logdir, save_model_secs=30,
-                             global_step=model.global_step)
+                             global_step=model.global_step, save_summaries_secs=60)
     with sv.managed_session() as session:
         global_step = session.run(model.global_step)
         while True:
