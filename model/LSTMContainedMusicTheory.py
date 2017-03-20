@@ -91,12 +91,14 @@ class Model:
             pitch_labels = tf.slice(labels, [0, 0, 0], [-1, -1, pitch_size])
             pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
             pitch_logits = tf.slice(logits, [0, 0, 0], [-1, -1, pitch_size])
-            self._pitch_logits = pitch_logits = tf.clip_by_value(pitch_logits, 0, 1, "pitch_logits")
+            self._pitch_logits = pitch_logits = tf.clip_by_value(2 * tf.nn.sigmoid(pitch_logits) - 0.5, 0, 1, "pitch_logits")
             pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
             # 全部0のデータ（余剰データ）はlossの値に含めない
             trigger_loss = tf.reshape(tf.reduce_max(bar_labels_flat, axis=1), [-1, 1])
+            # 出力がすべて０になってしまっているので、labelが1のところのlossのweightを高くしてみる。
+            loss_weight = pitch_labels_flat * 30
             self._pitch_loss = pitch_loss = tf.reduce_mean(
-                trigger_loss * tf.pow(pitch_logits_flat - pitch_labels_flat, 4),
+                trigger_loss * loss_weight * tf.pow(pitch_logits_flat - pitch_labels_flat, 4),
                 name="pitch_loss")
             tf.summary.scalar('pitch_loss', pitch_loss)
 
