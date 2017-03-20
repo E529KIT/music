@@ -73,8 +73,9 @@ class Model:
 
             with tf.name_scope("bar"):
                 with tf.name_scope("LSTM") as scope:
+                    mix_inputs = tf.concat([inputs, pitch_logits], 2)
                     bar_init_state, bar_outputs, bar_last_state \
-                        = self._create_multi_lstm_cell(bar_inputs, config.bar_cell_size_list, sequence_length,
+                        = self._create_multi_lstm_cell(mix_inputs, config.bar_cell_size_list, sequence_length,
                                                        batch_size, scope, tf.nn.relu, config.keep_prob)
                     self._bar_init_state = bar_init_state
                     self._bar_last_state = bar_last_state
