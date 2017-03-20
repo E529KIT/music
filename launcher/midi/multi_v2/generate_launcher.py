@@ -4,8 +4,8 @@ import os
 
 import numpy as np
 import tensorflow as tf
-
-sys.path.append("../../")
+root_path = "../../../"
+sys.path.append(root_path)
 
 from converter.train_data_converter import create_midi_train_data_set_v2
 from model.LSTM_music import LSTM
@@ -30,7 +30,7 @@ class Config:
 
 def main(argv):
     config = Config
-    midi_dir = "../../midi/multi_train_midi"
+    midi_dir = root_path + "midi/multi_train_midi"
     midi_files = glob.glob(midi_dir + "/*.midi") + glob.glob(midi_dir + "/*.mid")
     train_data = create_midi_train_data_set_v2(midi_files, config.sequence_length, config.pitch_size, config.bar_size)
     model = LSTM(config, generate=True)
@@ -42,9 +42,15 @@ def main(argv):
         saver.restore(session, FLAGS.logdir + "/data/model")
         for midi_file, data in zip(midi_files, train_data):
             inputs = data[0]
-            threshold_value = 0.5
+            init_threshold_value = 0.5
+            down_threshold_value = 0.1
             def norm_func(logits):
-                pitch = map(lambda x: 1 if x > threshold_value else 0, logits[:pitch_size])
+                threshold_value = init_threshold_value
+                while True:
+                    pitch = map(lambda x: 1 if x > threshold_value else 0, logits[:pitch_size])
+                    if max(pitch) == 1:
+                        break
+                    threshold_value -= down_threshold_value
                 bar_max_index = np.argmax(logits[pitch_size:])
                 bar = [0] * bar_size
                 bar[bar_max_index] = 1
