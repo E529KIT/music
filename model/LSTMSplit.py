@@ -99,7 +99,7 @@ class Model:
             # 全部0のデータ（余剰データ）はlossの値に含めない
             trigger_loss = tf.reshape(tf.reduce_max(bar_labels_flat, axis=1), [-1, 1])
             # 出力がすべて０になってしまっているので、labelが1のところのlossのweightを高くしてみる。
-            loss_weight = pitch_labels_flat * 10
+            loss_weight = tf.clip_by_value(pitch_labels_flat * 10, 0, 10)
             self._pitch_loss = pitch_loss = tf.reduce_mean(
                 trigger_loss * loss_weight * tf.pow(pitch_logits_flat - pitch_labels_flat, 4),
                 name="pitch_loss")
