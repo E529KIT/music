@@ -32,7 +32,7 @@ class SplitConfig:
     pitch_size = 128
     bar_size = 32
     pitch_cell_size_list = [128, 64]
-    bar_cell_size_list = [32]
+    bar_cell_size_list = [32, 32]
     keep_prob = 0.7
     optimizer_function = tf.train.GradientDescentOptimizer(0.1)
     clip_norm = 3
