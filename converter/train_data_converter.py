@@ -86,17 +86,17 @@ def create_midi_train_data_set_v2(file_name_list, sequence_length, pitch_size, b
     train_data = []
     for file_name in file_name_list:
         try:
-            train_data.append(_create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size))
+            train_data.append(_div_inputs_and_label(_create_midi_train_data_v2(file_name, pitch_size, bar_size), sequence_length))
         except:
             pass
     return train_data
 
-def create_midi_train_data_set_with_file_name_v2(file_name_list, sequence_length, pitch_size, bar_size):
+def create_midi_train_data_set_with_file_name_v2(file_name_list, pitch_size, bar_size):
     train_data = []
     success_file_names = []
     for file_name in file_name_list:
         try:
-            train_data.append(_create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size))
+            train_data.append(_create_midi_train_data_v2(file_name, pitch_size, bar_size))
             success_file_names.append(file_name)
         except:
             pass
@@ -110,7 +110,7 @@ def _midi_program_valid(midi):
     return len(program_set) == 1
 
 
-def _create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size):
+def _create_midi_train_data_v2(file_name, pitch_size, bar_size):
     midi = midi_converter.load_file(file_name)
     if not _midi_program_valid(midi):
         raise Exception("has many instruments")
@@ -152,7 +152,7 @@ def _create_midi_train_data_v2(file_name, sequence_length, pitch_size, bar_size)
         bar_data[bar_index] = 1
 
         train_data.append(pitch_data + bar_data)
-    return _div_inputs_and_label(train_data, sequence_length)
+    return train_data
 
 
 def generate_midi_v2(file_name, data, pitch_size, bar_size, velocity=100, instrument=0, tempo=120):

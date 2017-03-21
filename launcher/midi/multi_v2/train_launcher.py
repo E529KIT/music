@@ -27,7 +27,7 @@ class Config:
 
 
 class SplitConfig:
-    batch_size = 40
+    batch_size = 10
     sequence_length = 100
     pitch_size = 128
     bar_size = 32
@@ -50,16 +50,14 @@ def main(argv):
             config = Config
             file_list = glob.glob("./train_data/*")
             input_size = output_size = config.pitch_size + config.bar_size
-            inputs, labels, _ = get_padded_batch(file_list, config.batch_size, input_size, output_size,
-                                                 config.sequence_length)
+            inputs, labels, _ = get_padded_batch(file_list, config.batch_size, input_size, output_size)
             model = Model(config, inputs=inputs, labels=labels, activate_function=tf.nn.sigmoid)
         elif FLAGS.model == "split":
             config = SplitConfig
             file_list = glob.glob("./train_data/*")
             input_size = output_size = config.pitch_size + config.bar_size
-            inputs, labels, _ = get_padded_batch(file_list, config.batch_size, input_size, output_size,
-                                                 config.sequence_length)
-            model = SplitModel(config, inputs, labels)
+            inputs, labels, lengths = get_padded_batch(file_list, config.batch_size, input_size, output_size)
+            model = SplitModel(config, inputs, labels, lengths)
         else:
             tf.logging.ERROR("please select model")
             return
@@ -71,11 +69,14 @@ def main(argv):
         while True:
             if sv.should_stop(): break
             if global_step % 100 == 0:
-                (global_step, loss_, _) = session.run([model.global_step, model.loss,
-                                                       model.train_optimizer])
+                (global_step, loss, pitch_loss, bar_loss, _) = session.run(
+                    [model.global_step, model.loss, model.pitch_loss, model.bar_loss,
+                     model.train_optimizer])
                 tf.logging.info('Global Step: %d - '
-                                'Loss: %.3f - ',
-                                global_step, loss_)
+                                'Loss: %.3f - '
+                                'Pitch Loss: %3.f - '
+                                'Bar Loss: %3.f - ',
+                                global_step, loss, pitch_loss, bar_loss)
             else:
                 _, global_step = session.run([model.train_optimizer, model.global_step])
 

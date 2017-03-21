@@ -20,7 +20,7 @@ class DefaultConfig:
 
 
 class Model:
-    def __init__(self, config=DefaultConfig, inputs=None, labels=None):
+    def __init__(self, config=DefaultConfig, inputs=None, labels=None, lengths=None):
         self.batch_size = batch_size = config.batch_size
         self.sequence_length = sequence_length = config.sequence_length
         pitch_size = config.pitch_size
@@ -46,36 +46,34 @@ class Model:
 
         with tf.name_scope("hidden_layer"):
             with tf.name_scope("pitch"):
-                with tf.name_scope("cnn") as cnn_scope:
-                    filter_width = 12
-                    cnn_out_size = config.cnn_out_size
-                    pitch_inputs_flat = tf.reshape(pitch_inputs, [-1, pitch_size, 1])
-                    with tf.variable_scope(cnn_scope):
-                        cnn_w = tf.get_variable("weight", [filter_width, 1, cnn_out_size], tf.float32)
-                        cnn_b = tf.get_variable("bias", [cnn_out_size], tf.float32)
-                    cnn_out = tf.nn.conv1d(pitch_inputs_flat, cnn_w, 1, 'SAME') + cnn_b
-                    cnn_out = tf.nn.sigmoid(cnn_out + cnn_b)
-                    cnn_out = tf.reshape(cnn_out, [batch_size, sequence_length, -1])
+                # with tf.name_scope("cnn") as cnn_scope:
+                #     filter_width = 12
+                #     cnn_out_size = config.cnn_out_size
+                #     pitch_inputs_flat = tf.reshape(pitch_inputs, [-1, pitch_size, 1])
+                #     with tf.variable_scope(cnn_scope):
+                #         cnn_w = tf.get_variable("weight", [filter_width, 1, cnn_out_size], tf.float32)
+                #         cnn_b = tf.get_variable("bias", [cnn_out_size], tf.float32)
+                #     cnn_out = tf.nn.conv1d(pitch_inputs_flat, cnn_w, 1, 'SAME') + cnn_b
+                #     cnn_out = tf.nn.sigmoid(cnn_out + cnn_b)
+                #     cnn_out = tf.reshape(cnn_out, [batch_size, sequence_length, inputs])
 
                 with tf.name_scope("LSTM") as scope:
-                    mix_inputs = tf.concat([cnn_out, bar_inputs], 2)
+                    # mix_inputs = tf.concat([cnn_out, bar_inputs], 2)
                     pitch_init_state, pitch_outputs, pitch_last_state \
-                        = self._create_multi_lstm_cell(mix_inputs, config.pitch_cell_size_list, sequence_length,
+                        = self._create_multi_lstm_cell(inputs, config.pitch_cell_size_list,
                                                        batch_size, scope, tf.nn.sigmoid, config.keep_prob)
                     self._pitch_init_state = pitch_init_state
                     self._pitch_last_state = pitch_last_state
 
                 with tf.name_scope("last_layer") as scope:
-                    pitch_logits = tf.contrib.layers.fully_connected(inputs=pitch_outputs,
-                                                                     num_outputs=config.pitch_size,
-                                                                     scope=scope)
-                    self._pitch_logits = pitch_logits \
-                        = tf.clip_by_value(2 * tf.nn.sigmoid(pitch_logits) - 0.5, 0, 1, "pitch_logits")
+                    self._pitch_logits = pitch_logits = \
+                        tf.contrib.layers.fully_connected(inputs=pitch_outputs, num_outputs=config.pitch_size,
+                                                          scope=scope, activation_fn=tf.nn.sigmoid)
 
             with tf.name_scope("bar"):
                 with tf.name_scope("LSTM") as scope:
                     bar_init_state, bar_outputs, bar_last_state \
-                        = self._create_multi_lstm_cell(inputs, config.bar_cell_size_list, sequence_length,
+                        = self._create_multi_lstm_cell(inputs, config.bar_cell_size_list,
                                                        batch_size, scope, tf.nn.relu, config.keep_prob)
                     self._bar_init_state = bar_init_state
                     self._bar_last_state = bar_last_state
@@ -88,21 +86,20 @@ class Model:
             self._last_state = tuple([pitch_last_state, bar_last_state])
 
         with tf.name_scope("loss"):
+            mask_flat = tf.reshape(tf.sequence_mask(lengths, dtype=tf.float32), [-1])
+
             bar_labels_flat = tf.reshape(bar_labels, [-1, bar_size])
             bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
-            self._bar_loss = bar_loss = tf.reduce_mean(
-                -bar_labels_flat * tf.log(tf.clip_by_value(bar_logits_flat, 1e-10, 1.0)), name="bar_loss")
+            bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(tf.clip_by_value(bar_logits_flat, 1e-10, 1.0)), 1)
+            self._bar_loss = bar_loss = tf.reduce_mean(mask_flat * bar_loss)
             tf.summary.scalar('bar_loss', bar_loss)
 
             pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
             pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
-            # 全部0のデータ（余剰データ）はlossの値に含めない
-            trigger_loss = tf.reshape(tf.reduce_max(bar_labels_flat, axis=1), [-1, 1])
             # 出力がすべて０になってしまっているので、labelが1のところのlossのweightを高くしてみる。
-            loss_weight = tf.clip_by_value(pitch_labels_flat * 30, 1, 30)
-            self._pitch_loss = pitch_loss = tf.reduce_mean(
-                trigger_loss * loss_weight * tf.pow(pitch_logits_flat - pitch_labels_flat, 4),
-                name="pitch_loss")
+            loss_weight = tf.clip_by_value(pitch_labels_flat * 10, 1, 10)
+            pitch_loss = tf.reduce_mean(loss_weight * tf.square(pitch_logits_flat - pitch_labels_flat), 1)
+            self._pitch_loss = pitch_loss = tf.reduce_mean(mask_flat * pitch_loss)
             tf.summary.scalar('pitch_loss', pitch_loss)
 
             self._logits = tf.concat([pitch_logits, bar_logits], 2)
@@ -128,7 +125,7 @@ class Model:
                 # tf.summary.scalar('gradient/min', tf.reduce_min(abs_gradient))
                 tf.summary.scalar('gradient/mean', tf.reduce_mean(abs_gradient))
 
-    def _create_multi_lstm_cell(self, inputs, cell_size_list, sequence_length, batch_size, scope, activation,
+    def _create_multi_lstm_cell(self, inputs, cell_size_list, batch_size, scope, activation,
                                 keep_prob=None):
         cells = []
         for cell_size in cell_size_list:
@@ -138,8 +135,8 @@ class Model:
             cells.append(cell)
         cell = tf.contrib.rnn.MultiRNNCell(cells, state_is_tuple=True)
         initial_state = cell.zero_state(batch_size, dtype=tf.float32)
-        outputs, state = tf.nn.dynamic_rnn(cell, inputs, [sequence_length] * batch_size, initial_state,
-                                           parallel_iterations=1, swap_memory=True, scope=scope)
+        outputs, state = tf.nn.dynamic_rnn(cell, inputs, initial_state=initial_state, parallel_iterations=1, swap_memory=True,
+                                           scope=scope)
         return initial_state, outputs, state
 
     @property

@@ -16,8 +16,7 @@ def create_sequence_example(inputs, labels):
     return tf.train.SequenceExample(feature_lists=feature_lists)
 
 
-def get_padded_batch(file_list, batch_size, input_size, label_size,
-                     sequence_length, num_enqueuing_threads=4):
+def get_padded_batch(file_list, batch_size, input_size, label_size, num_enqueuing_threads=4):
     file_queue = tf.train.string_input_producer(file_list)
     reader = tf.TFRecordReader()
     _, serialized_example = reader.read(file_queue)
@@ -37,7 +36,7 @@ def get_padded_batch(file_list, batch_size, input_size, label_size,
     queue = tf.PaddingFIFOQueue(
         capacity=1000,
         dtypes=[tf.float32, tf.float32, tf.int32],
-        shapes=[(sequence_length, input_size), (sequence_length, label_size), ()])
+        shapes=[(None, input_size), (None, label_size), ()])
 
     enqueue_ops = [queue.enqueue([sequence['inputs'],
                                   sequence['labels'],
