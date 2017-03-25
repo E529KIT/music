@@ -74,8 +74,8 @@ def main(argv):
                      model.train_optimizer])
                 tf.logging.info('Global Step: %d - '
                                 'Loss: %.3f - '
-                                'Pitch Loss: %3.f - '
-                                'Bar Loss: %3.f - ',
+                                'Pitch Loss: %.3f - '
+                                'Bar Loss: %.3f - ',
                                 global_step, loss, pitch_loss, bar_loss)
             else:
                 _, global_step = session.run([model.train_optimizer, model.global_step])
