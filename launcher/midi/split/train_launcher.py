@@ -32,7 +32,7 @@ def main(argv):
         return
     with tf.Graph().as_default() as graph:
         config = Config
-        file_list = glob.glob("./train_data/*")
+        file_list = glob.glob("../train_data/*")
         input_size = output_size = config.pitch_size + config.bar_size
         inputs, labels, lengths = get_padded_batch(file_list, config.batch_size, input_size, output_size)
         model = SplitModel(config, inputs, labels, lengths)
