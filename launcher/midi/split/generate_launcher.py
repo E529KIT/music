@@ -52,7 +52,7 @@ def main(argv):
         saver.restore(session, checkpoint_file)
         for midi_file, data in zip(midi_files, train_data):
             inputs = data[0]
-            init_threshold_value = 0.5
+            init_threshold_value = 0.8
             down_threshold_value = 0.1
 
             pitch_state, bar_state = session.run([model.pitch_initial_state, model.bar_initial_state])
@@ -71,6 +71,7 @@ def main(argv):
                 feed_dict = {model.inputs: [[result[-1]]], model.bar_initial_state: bar_state,
                              model.pitch_labels: [[pitch]]}
                 bar_logits, bar_state = session.run([model.bar_logits, model.bar_last_state], feed_dict)
+                print bar_logits
                 bar_max_index = np.argmax(bar_logits)
                 bar = [0] * bar_size
                 bar[bar_max_index] = 1

@@ -21,7 +21,7 @@ def _create_multi_lstm_cell(inputs, cell_size_list, batch_size, scope, keep_prob
 
 
 class Model:
-    def __init__(self, config, inputs=None, labels=None, lengths=None):
+    def __init__(self, config, inputs=None, labels=None, lengths=None, generate=False):
         self.batch_size = batch_size = config.batch_size
         self.sequence_length = sequence_length = config.sequence_length
         pitch_size = config.pitch_size
@@ -73,8 +73,9 @@ class Model:
 
             with tf.name_scope("bar"):
                 with tf.name_scope("LSTM") as scope:
+                    mix_inputs = tf.concat([inputs, pitch_labels], 2)
                     bar_init_state, bar_outputs, bar_last_state \
-                        = _create_multi_lstm_cell(inputs, config.bar_cell_size_list,
+                        = _create_multi_lstm_cell(mix_inputs, config.bar_cell_size_list,
                                                        batch_size, scope, config.keep_prob)
                     self._bar_init_state = bar_init_state
                     self._bar_last_state = bar_last_state
@@ -86,46 +87,47 @@ class Model:
             self._init_state = tuple([pitch_init_state, bar_init_state])
             self._last_state = tuple([pitch_last_state, bar_last_state])
 
-        with tf.name_scope("loss"):
-            mask_flat = tf.reshape(tf.sequence_mask(lengths, dtype=tf.float32), [-1])
+        if not generate:
+            with tf.name_scope("loss"):
+                mask_flat = tf.reshape(tf.sequence_mask(lengths, dtype=tf.float32), [-1])
 
-            pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
-            pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
-            # 出力がすべて０になってしまっているので、labelが1のところのlossのweightを高くしてみる。
-            loss_weight = tf.clip_by_value(pitch_labels_flat * 10, 1, 10)
-            pitch_loss = tf.reduce_mean(loss_weight * tf.square(pitch_logits_flat - pitch_labels_flat), 1)
-            self._pitch_loss = pitch_loss = tf.reduce_mean(mask_flat * pitch_loss)
-            tf.summary.scalar('pitch_loss', pitch_loss)
+                pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
+                pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
+                # 出力がすべて０になってしまっているので、labelが1のところのlossのweightを高くしてみる。
+                loss_weight = tf.clip_by_value(pitch_labels_flat * 10, 1, 10)
+                pitch_loss = tf.reduce_mean(loss_weight * tf.square(pitch_logits_flat - pitch_labels_flat), 1)
+                self._pitch_loss = pitch_loss = tf.reduce_mean(mask_flat * pitch_loss)
+                tf.summary.scalar('pitch_loss', pitch_loss)
 
 
-            bar_labels_flat = tf.reshape(bar_labels, [-1, bar_size])
-            bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
-            bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(tf.clip_by_value(bar_logits_flat, 1e-10, 1.0)), 1)
-            self._bar_loss = bar_loss = tf.reduce_mean(mask_flat * bar_loss)
-            tf.summary.scalar('bar_loss', bar_loss)
+                bar_labels_flat = tf.reshape(bar_labels, [-1, bar_size])
+                bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
+                bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(tf.clip_by_value(bar_logits_flat, 1e-10, 1.0)), 1)
+                self._bar_loss = bar_loss = tf.reduce_mean(mask_flat * bar_loss)
+                tf.summary.scalar('bar_loss', bar_loss)
 
-            self._logits = tf.concat([pitch_logits, bar_logits], 2)
+                self._logits = tf.concat([pitch_logits, bar_logits], 2)
 
-            self._loss = loss = config.pitch_loss_wight * pitch_loss + bar_loss
-            tf.summary.scalar('loss', loss)
+                self._loss = loss = config.pitch_loss_wight * pitch_loss + bar_loss
+                tf.summary.scalar('loss', loss)
 
-        with tf.name_scope("train"):
-            params = tf.trainable_variables()
-            gradients = tf.gradients(loss, params)
-            clipped_gradients, _ = tf.clip_by_global_norm(gradients,
-                                                          config.clip_norm)
-            self._train_optimizer = config.optimizer_function.apply_gradients(zip(clipped_gradients, params),
-                                                                              global_step)
+            with tf.name_scope("train"):
+                params = tf.trainable_variables()
+                gradients = tf.gradients(loss, params)
+                clipped_gradients, _ = tf.clip_by_global_norm(gradients,
+                                                              config.clip_norm)
+                self._train_optimizer = config.optimizer_function.apply_gradients(zip(clipped_gradients, params),
+                                                                                  global_step)
 
-        for param, gradient in zip(params, clipped_gradients):
-            abs_gradient = tf.abs(gradient)
-            # not valid contain ":"
-            # variable name is "....:0"
-            # TODO: Every name support. This is not fulfill such as "....:10".
-            with tf.name_scope(param.name[:-2]):
-                # tf.summary.scalar('gradient/max', tf.reduce_max(abs_gradient))
-                # tf.summary.scalar('gradient/min', tf.reduce_min(abs_gradient))
-                tf.summary.scalar('gradient/mean', tf.reduce_mean(abs_gradient))
+            for param, gradient in zip(params, clipped_gradients):
+                abs_gradient = tf.abs(gradient)
+                # not valid contain ":"
+                # variable name is "....:0"
+                # TODO: Every name support. This is not fulfill such as "....:10".
+                with tf.name_scope(param.name[:-2]):
+                    # tf.summary.scalar('gradient/max', tf.reduce_max(abs_gradient))
+                    # tf.summary.scalar('gradient/min', tf.reduce_min(abs_gradient))
+                    tf.summary.scalar('gradient/mean', tf.reduce_mean(abs_gradient))
 
 
     @property
