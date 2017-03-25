@@ -5,22 +5,23 @@ LSTM層をpitchとbarで分ける
 import tensorflow as tf
 
 
-class DefaultConfig:
-    batch_size = 5
-    sequence_length = 36
-    pitch_size = 128
-    bar_size = 32
-    pitch_cell_size_list = [20, 30, 40]
-    bar_cell_size_list = [30]
-    keep_prob = 0.9
-    optimizer_function = tf.train.AdamOptimizer(0.5)
-    clip_norm = 3
-    pitch_loss_wight = 1
-    cnn_out_size = 1
+def _create_multi_lstm_cell(inputs, cell_size_list, batch_size, scope, keep_prob=None):
+    cells = []
+    for cell_size in cell_size_list:
+        cell = tf.contrib.rnn.BasicLSTMCell(cell_size, forget_bias=0)
+        if keep_prob and keep_prob < 1:
+            cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=keep_prob)
+        cells.append(cell)
+    cell = tf.contrib.rnn.MultiRNNCell(cells, state_is_tuple=True)
+    initial_state = cell.zero_state(batch_size, dtype=tf.float32)
+    outputs, state = tf.nn.dynamic_rnn(cell, inputs, initial_state=initial_state, parallel_iterations=1,
+                                       swap_memory=True,
+                                       scope=scope)
+    return initial_state, outputs, state
 
 
 class Model:
-    def __init__(self, config=DefaultConfig, inputs=None, labels=None, lengths=None):
+    def __init__(self, config, inputs=None, labels=None, lengths=None):
         self.batch_size = batch_size = config.batch_size
         self.sequence_length = sequence_length = config.sequence_length
         pitch_size = config.pitch_size
@@ -60,8 +61,8 @@ class Model:
                 with tf.name_scope("LSTM") as scope:
                     # mix_inputs = tf.concat([cnn_out, bar_inputs], 2)
                     pitch_init_state, pitch_outputs, pitch_last_state \
-                        = self._create_multi_lstm_cell(inputs, config.pitch_cell_size_list,
-                                                       batch_size, scope, tf.nn.sigmoid, config.keep_prob)
+                        = _create_multi_lstm_cell(inputs, config.pitch_cell_size_list,
+                                                       batch_size, scope, config.keep_prob)
                     self._pitch_init_state = pitch_init_state
                     self._pitch_last_state = pitch_last_state
 
@@ -73,8 +74,8 @@ class Model:
             with tf.name_scope("bar"):
                 with tf.name_scope("LSTM") as scope:
                     bar_init_state, bar_outputs, bar_last_state \
-                        = self._create_multi_lstm_cell(inputs, config.bar_cell_size_list,
-                                                       batch_size, scope, tf.nn.relu, config.keep_prob)
+                        = _create_multi_lstm_cell(inputs, config.bar_cell_size_list,
+                                                       batch_size, scope, config.keep_prob)
                     self._bar_init_state = bar_init_state
                     self._bar_last_state = bar_last_state
 
@@ -87,13 +88,6 @@ class Model:
 
         with tf.name_scope("loss"):
             mask_flat = tf.reshape(tf.sequence_mask(lengths, dtype=tf.float32), [-1])
-            lengths_sum = tf.to_float(tf.reduce_sum(lengths))
-
-            bar_labels_flat = tf.reshape(bar_labels, [-1, bar_size])
-            bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
-            bar_loss = tf.reduce_sum(-bar_labels_flat * tf.log(tf.clip_by_value(bar_logits_flat, 1e-10, 1.0)), 1)
-            self._bar_loss = bar_loss = tf.reduce_sum(mask_flat * bar_loss) / (lengths_sum * config.bar_size)
-            tf.summary.scalar('bar_loss', bar_loss)
 
             pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
             pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
@@ -102,6 +96,13 @@ class Model:
             pitch_loss = tf.reduce_mean(loss_weight * tf.square(pitch_logits_flat - pitch_labels_flat), 1)
             self._pitch_loss = pitch_loss = tf.reduce_mean(mask_flat * pitch_loss)
             tf.summary.scalar('pitch_loss', pitch_loss)
+
+
+            bar_labels_flat = tf.reshape(bar_labels, [-1, bar_size])
+            bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
+            bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(tf.clip_by_value(bar_logits_flat, 1e-10, 1.0)), 1)
+            self._bar_loss = bar_loss = tf.reduce_mean(mask_flat * bar_loss)
+            tf.summary.scalar('bar_loss', bar_loss)
 
             self._logits = tf.concat([pitch_logits, bar_logits], 2)
 
@@ -126,19 +127,6 @@ class Model:
                 # tf.summary.scalar('gradient/min', tf.reduce_min(abs_gradient))
                 tf.summary.scalar('gradient/mean', tf.reduce_mean(abs_gradient))
 
-    def _create_multi_lstm_cell(self, inputs, cell_size_list, batch_size, scope, activation,
-                                keep_prob=None):
-        cells = []
-        for cell_size in cell_size_list:
-            cell = tf.contrib.rnn.BasicLSTMCell(cell_size, forget_bias=0, activation=activation)
-            if keep_prob and keep_prob < 1:
-                cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=keep_prob)
-            cells.append(cell)
-        cell = tf.contrib.rnn.MultiRNNCell(cells, state_is_tuple=True)
-        initial_state = cell.zero_state(batch_size, dtype=tf.float32)
-        outputs, state = tf.nn.dynamic_rnn(cell, inputs, initial_state=initial_state, parallel_iterations=1, swap_memory=True,
-                                           scope=scope)
-        return initial_state, outputs, state
 
     @property
     def inputs(self):

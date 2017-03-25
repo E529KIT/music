@@ -32,9 +32,9 @@ class SplitConfig:
     pitch_size = 128
     bar_size = 32
     pitch_cell_size_list = [128, 64]
-    bar_cell_size_list = [32, 32]
+    bar_cell_size_list = [128, 32]
     keep_prob = 0.7
-    optimizer_function = tf.train.GradientDescentOptimizer(0.1)
+    optimizer_function = tf.train.AdamOptimizer(0.01)
     clip_norm = 3
     pitch_loss_wight = 20
     cnn_out_size = 14
@@ -68,7 +68,7 @@ def main(argv):
         global_step = session.run(model.global_step)
         while True:
             if sv.should_stop(): break
-            if global_step % 100 == 0:
+            if global_step % 10 == 0:
                 (global_step, loss, pitch_loss, bar_loss, _) = session.run(
                     [model.global_step, model.loss, model.pitch_loss, model.bar_loss,
                      model.train_optimizer])
