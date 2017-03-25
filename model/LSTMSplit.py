@@ -47,21 +47,22 @@ class Model:
 
         with tf.name_scope("hidden_layer"):
             with tf.name_scope("pitch"):
-                # with tf.name_scope("cnn") as cnn_scope:
-                #     filter_width = 12
-                #     cnn_out_size = config.cnn_out_size
-                #     pitch_inputs_flat = tf.reshape(pitch_inputs, [-1, pitch_size, 1])
-                #     with tf.variable_scope(cnn_scope):
-                #         cnn_w = tf.get_variable("weight", [filter_width, 1, cnn_out_size], tf.float32)
-                #         cnn_b = tf.get_variable("bias", [cnn_out_size], tf.float32)
-                #     cnn_out = tf.nn.conv1d(pitch_inputs_flat, cnn_w, 1, 'SAME') + cnn_b
-                #     cnn_out = tf.nn.sigmoid(cnn_out + cnn_b)
-                #     cnn_out = tf.reshape(cnn_out, [batch_size, sequence_length, inputs])
+                with tf.name_scope("cnn") as scope:
+                    filter_width = 12
+                    cnn_out_size = config.cnn_out_size
+                    outputs = []
+                    for i in range(pitch_size - filter_width):
+                        reuse = i == 0
+                        cnn_in = tf.slice(pitch_inputs, [0, 0, i], [-1, -1, filter_width])
+                        output = tf.contrib.layers.fully_connected(inputs=cnn_in, num_outputs=cnn_out_size,
+                                                        scope=scope, activation_fn=tf.nn.sigmoid, reuse=reuse)
+                        outputs.append(output)
+                    cnn_out = tf.concat(outputs, 2)
 
                 with tf.name_scope("LSTM") as scope:
-                    # mix_inputs = tf.concat([cnn_out, bar_inputs], 2)
+                    mix_inputs = tf.concat([cnn_out, bar_inputs], 2)
                     pitch_init_state, pitch_outputs, pitch_last_state \
-                        = _create_multi_lstm_cell(inputs, config.pitch_cell_size_list,
+                        = _create_multi_lstm_cell(mix_inputs, config.pitch_cell_size_list,
                                                        batch_size, scope, config.keep_prob)
                     self._pitch_init_state = pitch_init_state
                     self._pitch_last_state = pitch_last_state
@@ -108,7 +109,7 @@ class Model:
 
                 self._logits = tf.concat([pitch_logits, bar_logits], 2)
 
-                self._loss = loss = config.pitch_loss_wight * pitch_loss + bar_loss
+                self._loss = loss = pitch_loss + bar_loss
                 tf.summary.scalar('loss', loss)
 
             with tf.name_scope("train"):
