@@ -87,11 +87,12 @@ class Model:
 
         with tf.name_scope("loss"):
             mask_flat = tf.reshape(tf.sequence_mask(lengths, dtype=tf.float32), [-1])
+            lengths_sum = tf.to_float(tf.reduce_sum(lengths))
 
             bar_labels_flat = tf.reshape(bar_labels, [-1, bar_size])
             bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
-            bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(tf.clip_by_value(bar_logits_flat, 1e-10, 1.0)), 1)
-            self._bar_loss = bar_loss = tf.reduce_mean(mask_flat * bar_loss)
+            bar_loss = tf.reduce_sum(-bar_labels_flat * tf.log(tf.clip_by_value(bar_logits_flat, 1e-10, 1.0)), 1)
+            self._bar_loss = bar_loss = tf.reduce_sum(mask_flat * bar_loss) / (lengths_sum * config.bar_size)
             tf.summary.scalar('bar_loss', bar_loss)
 
             pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
