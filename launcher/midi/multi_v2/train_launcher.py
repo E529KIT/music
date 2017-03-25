@@ -36,7 +36,6 @@ class SplitConfig:
     keep_prob = 0.7
     optimizer_function = tf.train.AdamOptimizer(0.01)
     clip_norm = 3
-    pitch_loss_wight = 20
     cnn_out_size = 14
 
 
