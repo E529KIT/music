@@ -17,12 +17,13 @@ class Config:
     sequence_length = 100
     pitch_size = 128
     bar_size = 32
-    pitch_cell_size_list = [128, 64]
+    pitch_cell_size_list = [128, 128]
     bar_cell_size_list = [128, 32]
     keep_prob = 0.7
     optimizer_function = tf.train.AdamOptimizer(0.01)
     clip_norm = 3
-    cnn_out_size = 14
+    cnn_out_size = 3
+    on_pitch_loss_weight = 2
 
 
 def main(argv):

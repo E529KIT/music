@@ -23,7 +23,6 @@ def _create_multi_lstm_cell(inputs, cell_size_list, batch_size, scope, keep_prob
 class Model:
     def __init__(self, config, inputs=None, labels=None, lengths=None, generate=False):
         self.batch_size = batch_size = config.batch_size
-        self.sequence_length = sequence_length = config.sequence_length
         pitch_size = config.pitch_size
         bar_size = config.bar_size
         input_size = pitch_size + bar_size
@@ -33,14 +32,14 @@ class Model:
 
         with tf.name_scope("interface"):
             if inputs is None:
-                inputs = tf.placeholder(tf.float32, [batch_size, sequence_length, input_size],
+                inputs = tf.placeholder(tf.float32, [batch_size, config.sequence_length, input_size],
                                         "input_data")
             self._inputs = inputs
             self._pitch_inputs = pitch_inputs = tf.slice(inputs, [0, 0, 0], [-1, -1, pitch_size])
             self._bar_inputs = bar_inputs = tf.slice(inputs, [0, 0, pitch_size], [-1, -1, bar_size])
 
             if labels is None:
-                labels = tf.placeholder(tf.float32, [batch_size, sequence_length, label_size], "labels")
+                labels = tf.placeholder(tf.float32, [batch_size, config.sequence_length, label_size], "labels")
             self._labels = labels
             self._pitch_labels = pitch_labels = tf.slice(labels, [0, 0, 0], [-1, -1, pitch_size])
             self._bar_labels = bar_labels = tf.slice(labels, [0, 0, pitch_size], [-1, -1, bar_size])
@@ -55,7 +54,8 @@ class Model:
                         reuse = i == 0
                         cnn_in = tf.slice(pitch_inputs, [0, 0, i], [-1, -1, filter_width])
                         output = tf.contrib.layers.fully_connected(inputs=cnn_in, num_outputs=cnn_out_size,
-                                                        scope=scope, activation_fn=tf.nn.sigmoid, reuse=reuse)
+                                                                   scope=scope, activation_fn=tf.nn.sigmoid,
+                                                                   reuse=reuse)
                         outputs.append(output)
                     cnn_out = tf.concat(outputs, 2)
 
@@ -63,27 +63,29 @@ class Model:
                     mix_inputs = tf.concat([cnn_out, bar_inputs], 2)
                     pitch_init_state, pitch_outputs, pitch_last_state \
                         = _create_multi_lstm_cell(mix_inputs, config.pitch_cell_size_list,
-                                                       batch_size, scope, config.keep_prob)
+                                                  batch_size, scope, config.keep_prob)
                     self._pitch_init_state = pitch_init_state
                     self._pitch_last_state = pitch_last_state
 
-                with tf.name_scope("last_layer") as scope:
-                    self._pitch_logits = pitch_logits = \
-                        tf.contrib.layers.fully_connected(inputs=pitch_outputs, num_outputs=config.pitch_size,
-                                                          scope=scope, activation_fn=tf.nn.sigmoid)
-
             with tf.name_scope("bar"):
                 with tf.name_scope("LSTM") as scope:
-                    mix_inputs = tf.concat([inputs, pitch_labels], 2)
                     bar_init_state, bar_outputs, bar_last_state \
-                        = _create_multi_lstm_cell(mix_inputs, config.bar_cell_size_list,
-                                                       batch_size, scope, config.keep_prob)
+                        = _create_multi_lstm_cell(inputs, config.bar_cell_size_list,
+                                                  batch_size, scope, config.keep_prob)
                     self._bar_init_state = bar_init_state
                     self._bar_last_state = bar_last_state
 
-                with tf.name_scope("last_layer") as scope:
+            with tf.name_scope("last_layer"):
+                concat_pitch_bar_lstm_out = tf.concat([pitch_outputs, bar_outputs], 2)
+                with tf.name_scope("pitch") as scope:
+                    self._pitch_logits = pitch_logits = \
+                        tf.contrib.layers.fully_connected(inputs=concat_pitch_bar_lstm_out,
+                                                          num_outputs=config.pitch_size,
+                                                          scope=scope, activation_fn=tf.nn.sigmoid)
+                with tf.name_scope("bar") as scope:
                     self._bar_logits = bar_logits \
-                        = tf.contrib.layers.fully_connected(inputs=bar_outputs, num_outputs=config.bar_size,
+                        = tf.contrib.layers.fully_connected(inputs=concat_pitch_bar_lstm_out,
+                                                            num_outputs=config.bar_size,
                                                             scope=scope, activation_fn=tf.nn.softmax)
             self._init_state = tuple([pitch_init_state, bar_init_state])
             self._last_state = tuple([pitch_last_state, bar_last_state])
@@ -92,20 +94,23 @@ class Model:
             with tf.name_scope("loss"):
                 mask_flat = tf.reshape(tf.sequence_mask(lengths, dtype=tf.float32), [-1])
 
-                pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
-                pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
-                # 出力がすべて０になってしまっているので、labelが1のところのlossのweightを高くしてみる。
-                loss_weight = tf.clip_by_value(pitch_labels_flat * 10, 1, 10)
-                pitch_loss = tf.reduce_mean(loss_weight * tf.square(pitch_logits_flat - pitch_labels_flat), 1)
-                self._pitch_loss = pitch_loss = tf.reduce_mean(mask_flat * pitch_loss)
-                tf.summary.scalar('pitch_loss', pitch_loss)
+                with tf.name_scope("pitch_los"):
+                    pitch_labels_flat = tf.reshape(pitch_labels, [-1, pitch_size])
+                    pitch_logits_flat = tf.reshape(pitch_logits, [-1, pitch_size])
+                    # 出力がすべて０になってしまっているので、labelが1のところのlossのweightを高くしてみる。
+                    loss_weight = tf.clip_by_value(pitch_labels_flat * config.on_pitch_loss_weight, 1,
+                                                   config.on_pitch_loss_weight)
+                    pitch_loss = tf.reduce_mean(loss_weight * tf.square(pitch_logits_flat - pitch_labels_flat), 1)
+                    self._pitch_loss = pitch_loss = tf.reduce_mean(mask_flat * pitch_loss)
+                    tf.summary.scalar('pitch_loss', pitch_loss)
 
-
-                bar_labels_flat = tf.reshape(bar_labels, [-1, bar_size])
-                bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
-                bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(tf.clip_by_value(bar_logits_flat, 1e-10, 1.0)), 1)
-                self._bar_loss = bar_loss = tf.reduce_mean(mask_flat * bar_loss)
-                tf.summary.scalar('bar_loss', bar_loss)
+                with tf.name_scope("bar_loss"):
+                    bar_labels_flat = tf.reshape(bar_labels, [-1, bar_size])
+                    bar_logits_flat = tf.reshape(bar_logits, [-1, bar_size])
+                    bar_loss = tf.reduce_mean(-bar_labels_flat * tf.log(tf.clip_by_value(bar_logits_flat, 1e-10, 1.0)),
+                                              1)
+                    self._bar_loss = bar_loss = tf.reduce_mean(mask_flat * bar_loss)
+                    tf.summary.scalar('bar_loss', bar_loss)
 
                 self._logits = tf.concat([pitch_logits, bar_logits], 2)
 
@@ -126,10 +131,7 @@ class Model:
                 # variable name is "....:0"
                 # TODO: Every name support. This is not fulfill such as "....:10".
                 with tf.name_scope(param.name[:-2]):
-                    # tf.summary.scalar('gradient/max', tf.reduce_max(abs_gradient))
-                    # tf.summary.scalar('gradient/min', tf.reduce_min(abs_gradient))
                     tf.summary.scalar('gradient/mean', tf.reduce_mean(abs_gradient))
-
 
     @property
     def inputs(self):
